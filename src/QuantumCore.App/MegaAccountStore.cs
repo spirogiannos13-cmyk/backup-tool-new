@@ -9,7 +9,7 @@ public sealed class StoredMegaAccount
     public string Email { get; set; } = "";
     public string SessionId { get; set; } = "";
     public string MasterKey { get; set; } = "";
-    public LogonSessionToken ToToken() => new(SessionId, Convert.FromBase64String(MasterKey));
+    public MegaApiClient.LogonSessionToken ToToken() => new(SessionId, Convert.FromBase64String(MasterKey));
 }
 
 public static class MegaAccountStore
@@ -34,7 +34,7 @@ public static class MegaAccountStore
         catch (JsonException) { return false; }
     }
 
-    public static void Save(string email, LogonSessionToken token)
+    public static void Save(string email, MegaApiClient.LogonSessionToken token)
     {
         var account = new StoredMegaAccount
         {
