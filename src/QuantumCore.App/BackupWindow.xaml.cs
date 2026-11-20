@@ -1,6 +1,9 @@
+using CG.Web.MegaApiClient;
 using Microsoft.Win32;
 using System.IO;
+using System.IO.Compression;
 using System.Windows;
+using System.Windows.Controls;
 
 namespace QuantumCore.App;
 
@@ -11,10 +14,7 @@ public partial class BackupWindow : Window
     public string? CreatedBackupPath { get; private set; }
     public long BytesCopied { get; private set; }
 
-    public BackupWindow()
-    {
-        InitializeComponent();
-    }
+    public BackupWindow() => InitializeComponent();
 
     private void AddFiles_Click(object sender, RoutedEventArgs e)
     {
@@ -42,6 +42,16 @@ public partial class BackupWindow : Window
         if (dialog.ShowDialog(this) == true) DestinationBox.Text = dialog.FolderName;
     }
 
+    private void DestinationModeCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (LocalDestinationPanel is null) return;
+        LocalDestinationPanel.Visibility = DestinationModeCombo.SelectedIndex == 0 ? Visibility.Visible : Visibility.Collapsed;
+        if (StatusText is not null)
+            StatusText.Text = DestinationModeCombo.SelectedIndex == 1
+                ? "MEGA cloud selected. You will sign in securely when you start."
+                : "Choose a local folder. Source files are copied; originals are never modified.";
+    }
+
     private async void StartBackup_Click(object sender, RoutedEventArgs e)
     {
         if (_sources.Count == 0)
@@ -49,8 +59,19 @@ public partial class BackupWindow : Window
             MessageBox.Show(this, "Add at least one file or folder before starting.", "Source required", MessageBoxButton.OK, MessageBoxImage.Information);
             return;
         }
-        var destination = DestinationBox.Text;
-        if (string.IsNullOrWhiteSpace(destination) || !Directory.Exists(destination))
+
+        bool useMega = DestinationModeCombo.SelectedIndex == 1;
+        string? megaEmail = null;
+        string? megaPassword = null;
+
+        if (useMega)
+        {
+            var login = new MegaLoginWindow { Owner = this };
+            if (login.ShowDialog() != true) return;
+            megaEmail = login.Email;
+            megaPassword = login.Password;
+        }
+        else if (string.IsNullOrWhiteSpace(DestinationBox.Text) || !Directory.Exists(DestinationBox.Text))
         {
             MessageBox.Show(this, "Choose an existing destination folder.", "Destination required", MessageBoxButton.OK, MessageBoxImage.Information);
             return;
@@ -59,9 +80,22 @@ public partial class BackupWindow : Window
         StartButton.IsEnabled = false;
         CancelButton.Content = "Cancel operation";
         _cancellation = new CancellationTokenSource();
+        string? temporaryFolder = null;
+
         try
         {
-            var backupRoot = Path.Combine(destination, "QuantumCore_" + DateTime.Now.ToString("yyyyMMdd_HHmmss"));
+            string backupName = "QuantumCore_" + DateTime.Now.ToString("yyyyMMdd_HHmmss");
+            string backupRoot;
+            if (useMega)
+            {
+                temporaryFolder = Path.Combine(Path.GetTempPath(), "QuantumCore_" + Guid.NewGuid().ToString("N"));
+                backupRoot = Path.Combine(temporaryFolder, backupName);
+            }
+            else
+            {
+                backupRoot = Path.Combine(DestinationBox.Text, backupName);
+            }
+
             Directory.CreateDirectory(backupRoot);
             var files = new List<(string Source, string Root, string Relative)>();
             for (var i = 0; i < _sources.Count; i++)
@@ -98,19 +132,57 @@ public partial class BackupWindow : Window
                 var percent = totalBytes == 0 ? (double)completed / files.Count * 100 : (double)copiedBytes / totalBytes * 100;
                 BackupProgress.Value = percent;
                 ProgressLabel.Text = $"{percent:0}%";
-                StatusText.Text = $"Copied {completed:N0} of {files.Count:N0} files";
+                StatusText.Text = $"Prepared {completed:N0} of {files.Count:N0} files";
             }
 
-            CreatedBackupPath = backupRoot;
             BytesCopied = copiedBytes;
-            StatusText.Text = $"Backup completed successfully · {FormatBytes(copiedBytes)}";
-            ProgressLabel.Text = "100%";
-            MessageBox.Show(this, $"Backup completed successfully.\n\nSaved to:\n{backupRoot}", "Quantum Core", MessageBoxButton.OK, MessageBoxImage.Information);
+            if (useMega)
+            {
+                string archivePath = Path.Combine(temporaryFolder!, backupName + ".zip");
+                StatusText.Text = "Packaging backup for MEGA…";
+                await Task.Run(() => ZipFile.CreateFromDirectory(backupRoot, archivePath, CompressionLevel.Optimal, false), _cancellation.Token);
+                _cancellation.Token.ThrowIfCancellationRequested();
+
+                StatusText.Text = "Connecting to MEGA…";
+                var client = new MegaApiClient();
+                try
+                {
+                    await Task.Run(() => client.Login(megaEmail!, megaPassword!), _cancellation.Token);
+                    _cancellation.Token.ThrowIfCancellationRequested();
+                    var root = client.GetNodes().Single(n => n.Type == NodeType.Root);
+                    var remoteFolder = client.CreateFolder(backupName, root);
+                    var progress = new Progress<double>(p =>
+                    {
+                        BackupProgress.Value = Math.Clamp(p, 0, 100);
+                        ProgressLabel.Text = $"{p:0}%";
+                        StatusText.Text = $"Uploading to MEGA… {p:0}%";
+                    });
+                    await client.UploadFileAsync(archivePath, remoteFolder, progress);
+                    CreatedBackupPath = "MEGA:/" + backupName + ".zip";
+                    StatusText.Text = "MEGA UPLOAD COMPLETE";
+                    ProgressLabel.Text = "100%";
+                }
+                finally
+                {
+                    if (client.IsLoggedIn) client.Logout();
+                }
+            }
+            else
+            {
+                CreatedBackupPath = backupRoot;
+                StatusText.Text = $"Local backup completed · {FormatBytes(copiedBytes)}";
+                ProgressLabel.Text = "100%";
+            }
+
+            MessageBox.Show(this, useMega
+                ? $"Backup uploaded successfully to MEGA.\n\n{backupName}.zip"
+                : $"Backup completed successfully.\n\nSaved to:\n{backupRoot}",
+                "Quantum Core", MessageBoxButton.OK, MessageBoxImage.Information);
             DialogResult = true;
         }
         catch (OperationCanceledException)
         {
-            StatusText.Text = "Backup cancelled. The partial backup folder may be removed safely.";
+            StatusText.Text = "Backup cancelled. Any partial local data remains in the temporary or destination folder.";
             StartButton.IsEnabled = true;
             CancelButton.Content = "Close";
         }
@@ -123,6 +195,11 @@ public partial class BackupWindow : Window
         }
         finally
         {
+            if (temporaryFolder is not null && Directory.Exists(temporaryFolder))
+            {
+                try { Directory.Delete(temporaryFolder, true); } catch { }
+            }
+            if (megaPassword is not null) megaPassword = string.Empty;
             _cancellation?.Dispose();
             _cancellation = null;
         }
