@@ -63,6 +63,7 @@ public partial class BackupWindow : Window
         bool useMega = DestinationModeCombo.SelectedIndex == 1;
         string? megaEmail = null;
         string? megaPassword = null;
+        string? loginMfaCode = null;
 
         if (useMega)
         {
@@ -70,6 +71,7 @@ public partial class BackupWindow : Window
             if (login.ShowDialog() != true) return;
             megaEmail = login.Email;
             megaPassword = login.Password;
+            loginMfaCode = login.MfaCode;
         }
         else if (string.IsNullOrWhiteSpace(DestinationBox.Text) || !Directory.Exists(DestinationBox.Text))
         {
@@ -147,7 +149,7 @@ public partial class BackupWindow : Window
                 var client = new MegaApiClient();
                 try
                 {
-                    await Task.Run(() => client.Login(megaEmail!, megaPassword!), _cancellation.Token);
+                    await client.LoginAsync(megaEmail!, megaPassword!, loginMfaCode);
                     _cancellation.Token.ThrowIfCancellationRequested();
                     var root = client.GetNodes().Single(n => n.Type == NodeType.Root);
                     var remoteFolder = client.CreateFolder(backupName, root);
@@ -157,7 +159,7 @@ public partial class BackupWindow : Window
                         ProgressLabel.Text = $"{p:0}%";
                         StatusText.Text = $"Uploading to MEGA… {p:0}%";
                     });
-                    await client.UploadFileAsync(archivePath, remoteFolder, progress);
+                    await client.UploadFileAsync(archivePath, remoteFolder, progress, _cancellation.Token);
                     CreatedBackupPath = "MEGA:/" + backupName + ".zip";
                     StatusText.Text = "MEGA UPLOAD COMPLETE";
                     ProgressLabel.Text = "100%";
@@ -200,6 +202,7 @@ public partial class BackupWindow : Window
                 try { Directory.Delete(temporaryFolder, true); } catch { }
             }
             if (megaPassword is not null) megaPassword = string.Empty;
+            if (loginMfaCode is not null) loginMfaCode = string.Empty;
             _cancellation?.Dispose();
             _cancellation = null;
         }
