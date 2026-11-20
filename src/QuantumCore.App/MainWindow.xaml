@@ -115,23 +115,23 @@
                             </Ellipse>
                         </Grid>
                         <StackPanel Margin="11,0,0,0" VerticalAlignment="Center">
-                            <TextBlock Text="QUANTUM" FontSize="15" FontWeight="Bold" Foreground="#F2FAFF" CharacterSpacing="2"/>
-                            <TextBlock Text="CORE SYSTEMS" FontSize="9" Foreground="#53DDF8" CharacterSpacing="2"/>
+                            <TextBlock Text="QUANTUM" FontSize="15" FontWeight="Bold" Foreground="#F2FAFF"/>
+                            <TextBlock Text="CORE SYSTEMS" FontSize="9" Foreground="#53DDF8"/>
                         </StackPanel>
                     </StackPanel>
-                    <TextBlock Text="WORKSPACE" Foreground="#58738F" FontSize="10" FontWeight="Bold" Margin="12,0,0,12" CharacterSpacing="2"/>
+                    <TextBlock Text="WORKSPACE" Foreground="#58738F" FontSize="10" FontWeight="Bold" Margin="12,0,0,12"/>
                     <Button Style="{StaticResource NavButton}" Background="#142B45" Foreground="#55E5FF" Content="◈   Operations" Margin="0,0,0,5"/>
                     <Button Style="{StaticResource NavButton}" Content="▣   Backup Jobs" Margin="0,0,0,5"/>
                     <Button Style="{StaticResource NavButton}" Content="↻   Restore Center" Margin="0,0,0,5"/>
                     <Button Style="{StaticResource NavButton}" Content="◷   Schedules" Margin="0,0,0,26"/>
-                    <TextBlock Text="SYSTEM" Foreground="#58738F" FontSize="10" FontWeight="Bold" Margin="12,0,0,12" CharacterSpacing="2"/>
+                    <TextBlock Text="SYSTEM" Foreground="#58738F" FontSize="10" FontWeight="Bold" Margin="12,0,0,12"/>
                     <Button Style="{StaticResource NavButton}" Content="▤   Activity Logs" Margin="0,0,0,5"/>
                     <Button Style="{StaticResource NavButton}" Content="◇   Destinations" Margin="0,0,0,5"/>
                     <Button Style="{StaticResource NavButton}" Content="⚙   Settings"/>
                 </StackPanel>
                 <Border DockPanel.Dock="Bottom" Background="#101F33" BorderBrush="#294563" BorderThickness="1" CornerRadius="11" Padding="13">
                     <StackPanel>
-                        <TextBlock Text="ENGINE STATUS" FontSize="9" Foreground="#7894B2" CharacterSpacing="1.5"/>
+                        <TextBlock Text="ENGINE STATUS" FontSize="9" Foreground="#7894B2"/>
                         <StackPanel Orientation="Horizontal" Margin="0,9,0,0">
                             <Ellipse Width="7" Height="7" Fill="#47E6B0" VerticalAlignment="Center"/>
                             <TextBlock Text="  Ready for initialization" FontSize="11" Foreground="#B8D0E7"/>
@@ -152,7 +152,7 @@
 
             <Grid Grid.Row="0" Margin="0,0,0,30">
                 <StackPanel>
-                    <TextBlock Text="CONTROL CENTER / OVERVIEW" FontSize="10" Foreground="#55DDF7" CharacterSpacing="2"/>
+                    <TextBlock Text="CONTROL CENTER / OVERVIEW" FontSize="10" Foreground="#55DDF7"/>
                     <TextBlock Text="Quantum Operations" FontSize="30" FontWeight="SemiBold" Margin="0,7,0,4"/>
                     <TextBlock Text="Your backup environment, unified in one command space." FontSize="13" Foreground="{StaticResource MutedTextBrush}"/>
                 </StackPanel>
@@ -175,21 +175,21 @@
                 </Grid.ColumnDefinitions>
                 <Border Grid.Column="0" Style="{StaticResource PanelCard}" Margin="0,0,12,0">
                     <StackPanel>
-                        <TextBlock Text="TOTAL BACKUPS" Foreground="#8CA7C5" FontSize="10" CharacterSpacing="1.5"/>
+                        <TextBlock Text="TOTAL BACKUPS" Foreground="#8CA7C5" FontSize="10"/>
                         <TextBlock Text="—" FontSize="30" FontWeight="Light" Foreground="#F0F8FF" Margin="0,8,0,2"/>
                         <TextBlock Text="No backup records yet" FontSize="11" Foreground="#6886A5"/>
                     </StackPanel>
                 </Border>
                 <Border Grid.Column="1" Style="{StaticResource PanelCard}" Margin="6,0">
                     <StackPanel>
-                        <TextBlock Text="STORAGE USED" Foreground="#8CA7C5" FontSize="10" CharacterSpacing="1.5"/>
+                        <TextBlock Text="STORAGE USED" Foreground="#8CA7C5" FontSize="10"/>
                         <TextBlock Text="—" FontSize="30" FontWeight="Light" Foreground="#F0F8FF" Margin="0,8,0,2"/>
                         <TextBlock Text="Awaiting destination scan" FontSize="11" Foreground="#6886A5"/>
                     </StackPanel>
                 </Border>
                 <Border Grid.Column="2" Style="{StaticResource PanelCard}" Margin="12,0,0,0">
                     <StackPanel>
-                        <TextBlock Text="LAST BACKUP" Foreground="#8CA7C5" FontSize="10" CharacterSpacing="1.5"/>
+                        <TextBlock Text="LAST BACKUP" Foreground="#8CA7C5" FontSize="10"/>
                         <TextBlock Text="—" FontSize="30" FontWeight="Light" Foreground="#F0F8FF" Margin="0,8,0,2"/>
                         <TextBlock Text="No operations performed" FontSize="11" Foreground="#6886A5"/>
                     </StackPanel>
@@ -209,7 +209,7 @@
                             <RowDefinition Height="Auto"/>
                         </Grid.RowDefinitions>
                         <StackPanel>
-                            <TextBlock Text="QUANTUM CORE" Foreground="#55DDF7" FontSize="10" CharacterSpacing="2"/>
+                            <TextBlock Text="QUANTUM CORE" Foreground="#55DDF7" FontSize="10"/>
                             <TextBlock Text="Operations Monitor" FontSize="19" FontWeight="SemiBold" Margin="0,6,0,0"/>
                         </StackPanel>
                         <Grid Grid.Row="1" MinHeight="230">
@@ -236,7 +236,7 @@
                                 </Ellipse.Effect>
                             </Ellipse>
                             <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
-                                <TextBlock Text="CORE" FontSize="10" Foreground="#8DEBFF" CharacterSpacing="3" HorizontalAlignment="Center"/>
+                                <TextBlock Text="CORE" FontSize="10" Foreground="#8DEBFF" HorizontalAlignment="Center"/>
                                 <TextBlock Text="IDLE" FontSize="21" FontWeight="Light" Foreground="White" HorizontalAlignment="Center" Margin="0,3,0,0"/>
                             </StackPanel>
                         </Grid>
@@ -249,7 +249,7 @@
                 <StackPanel Grid.Column="1">
                     <Border Style="{StaticResource PanelCard}" Margin="0,0,0,12">
                         <StackPanel>
-                            <TextBlock Text="QUICK ACCESS" Foreground="#55DDF7" FontSize="10" CharacterSpacing="1.5"/>
+                            <TextBlock Text="QUICK ACCESS" Foreground="#55DDF7" FontSize="10"/>
                             <Button Style="{StaticResource ActionButton}" Content="＋  Create backup" HorizontalAlignment="Stretch" Margin="0,15,0,8"/>
                             <Button Style="{StaticResource NavButton}" Content="↻  Restore a backup" HorizontalAlignment="Stretch"/>
                             <Button Style="{StaticResource NavButton}" Content="◷  Configure schedule" HorizontalAlignment="Stretch"/>
@@ -257,7 +257,7 @@
                     </Border>
                     <Border Style="{StaticResource PanelCard}">
                         <StackPanel>
-                            <TextBlock Text="SYSTEM ACTIVITY" Foreground="#55DDF7" FontSize="10" CharacterSpacing="1.5"/>
+                            <TextBlock Text="SYSTEM ACTIVITY" Foreground="#55DDF7" FontSize="10"/>
                             <TextBlock Text="Awaiting first operation" FontSize="13" Margin="0,15,0,5"/>
                             <TextBlock Text="When you create a backup, its progress and events will appear here." TextWrapping="Wrap" Foreground="#7894B2" FontSize="11" LineHeight="18"/>
                         </StackPanel>
@@ -266,8 +266,8 @@
             </Grid>
 
             <Grid Grid.Row="3" Margin="0,18,0,0">
-                <TextBlock Text="QUANTUM CORE  •  WINDOWS DESKTOP" FontSize="9" Foreground="#526D89" CharacterSpacing="1.2" VerticalAlignment="Center"/>
-                <TextBlock Text="UI FOUNDATION / PREVIEW" FontSize="9" Foreground="#526D89" CharacterSpacing="1.2" HorizontalAlignment="Right"/>
+                <TextBlock Text="QUANTUM CORE  •  WINDOWS DESKTOP" FontSize="9" Foreground="#526D89" VerticalAlignment="Center"/>
+                <TextBlock Text="UI FOUNDATION / PREVIEW" FontSize="9" Foreground="#526D89" HorizontalAlignment="Right"/>
             </Grid>
         </Grid>
     </Grid>
