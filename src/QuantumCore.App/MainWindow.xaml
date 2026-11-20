@@ -123,7 +123,8 @@
                     <Button Style="{StaticResource NavButton}" Background="#142B45" Foreground="#55E5FF" Content="◈   Operations" Margin="0,0,0,5"/>
                     <Button Style="{StaticResource NavButton}" Content="▣   Backup Jobs" Margin="0,0,0,5"/>
                     <Button Style="{StaticResource NavButton}" Content="↻   Restore Center" Margin="0,0,0,5"/>
-                    <Button Style="{StaticResource NavButton}" Content="◷   Schedules" Margin="0,0,0,26" Click="Schedules_Click"/>
+                    <Button Style="{StaticResource NavButton}" Content="◷   Schedules" Margin="0,0,0,5" Click="Schedules_Click"/>
+                    <Button Style="{StaticResource NavButton}" Content="▦   SQL Connections" Margin="0,0,0,26" Click="SqlConnections_Click"/>
                     <TextBlock Text="SYSTEM" Foreground="#58738F" FontSize="10" FontWeight="Bold" Margin="12,0,0,12"/>
                     <Button Style="{StaticResource NavButton}" Content="▤   Activity Logs" Margin="0,0,0,5"/>
                     <Button Style="{StaticResource NavButton}" Content="◇   Destinations" Margin="0,0,0,5"/>
