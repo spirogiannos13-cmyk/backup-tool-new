@@ -87,7 +87,7 @@ public partial class SchedulesWindow : Window
             LocalDestination = toMega ? "" : LocalPathBox.Text,
             Frequency = FrequencyCombo.SelectedIndex == 1 ? "Weekly" : "Daily",
             DayOfWeek = (DayCombo.SelectedItem as ComboBoxItem)?.Content?.ToString() ?? "Monday",
-            Time = time.ToString(@"hh:mm")
+            Time = time.ToString(@"hh\:mm")
         };
 
         try
