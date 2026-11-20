@@ -163,7 +163,7 @@
                             <TextBlock Text="  SYSTEM STANDBY" FontSize="10" Foreground="#8FEBD0" FontWeight="SemiBold"/>
                         </StackPanel>
                     </Border>
-                    <Button Style="{StaticResource ActionButton}" Content="＋  NEW BACKUP" Margin="0,0,0,0"/>
+                    <Button Style="{StaticResource ActionButton}" Content="＋  NEW BACKUP" Margin="0,0,0,0" Click="NewBackup_Click"/>
                 </StackPanel>
             </Grid>
 
@@ -176,14 +176,14 @@
                 <Border Grid.Column="0" Style="{StaticResource PanelCard}" Margin="0,0,12,0">
                     <StackPanel>
                         <TextBlock Text="TOTAL BACKUPS" Foreground="#8CA7C5" FontSize="10"/>
-                        <TextBlock Text="—" FontSize="30" FontWeight="Light" Foreground="#F0F8FF" Margin="0,8,0,2"/>
-                        <TextBlock Text="No backup records yet" FontSize="11" Foreground="#6886A5"/>
+                        <TextBlock x:Name="TotalBackupsValue" Text="0" FontSize="30" FontWeight="Light" Foreground="#F0F8FF" Margin="0,8,0,2"/>
+                        <TextBlock x:Name="TotalBackupsCaption" Text="No backup records yet" FontSize="11" Foreground="#6886A5"/>
                     </StackPanel>
                 </Border>
                 <Border Grid.Column="1" Style="{StaticResource PanelCard}" Margin="6,0">
                     <StackPanel>
                         <TextBlock Text="STORAGE USED" Foreground="#8CA7C5" FontSize="10"/>
-                        <TextBlock Text="—" FontSize="30" FontWeight="Light" Foreground="#F0F8FF" Margin="0,8,0,2"/>
+                        <TextBlock x:Name="LastBackupValue" Text="—" FontSize="30" FontWeight="Light" Foreground="#F0F8FF" Margin="0,8,0,2"/>
                         <TextBlock Text="Awaiting destination scan" FontSize="11" Foreground="#6886A5"/>
                     </StackPanel>
                 </Border>
@@ -191,7 +191,7 @@
                     <StackPanel>
                         <TextBlock Text="LAST BACKUP" Foreground="#8CA7C5" FontSize="10"/>
                         <TextBlock Text="—" FontSize="30" FontWeight="Light" Foreground="#F0F8FF" Margin="0,8,0,2"/>
-                        <TextBlock Text="No operations performed" FontSize="11" Foreground="#6886A5"/>
+                        <TextBlock x:Name="LastBackupCaption" Text="No operations performed" FontSize="11" Foreground="#6886A5"/>
                     </StackPanel>
                 </Border>
             </Grid>
@@ -237,12 +237,12 @@
                             </Ellipse>
                             <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
                                 <TextBlock Text="CORE" FontSize="10" Foreground="#8DEBFF" HorizontalAlignment="Center"/>
-                                <TextBlock Text="IDLE" FontSize="21" FontWeight="Light" Foreground="White" HorizontalAlignment="Center" Margin="0,3,0,0"/>
+                                <TextBlock x:Name="CoreStateText" Text="IDLE" FontSize="21" FontWeight="Light" Foreground="White" HorizontalAlignment="Center" Margin="0,3,0,0"/>
                             </StackPanel>
                         </Grid>
                         <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Center">
                             <Ellipse Width="6" Height="6" Fill="#45E6B4" VerticalAlignment="Center"/>
-                            <TextBlock Text="  No active operations" FontSize="11" Foreground="#8CA7C5"/>
+                            <TextBlock x:Name="ActivityStatusText" Text="  No active operations" FontSize="11" Foreground="#8CA7C5"/>
                         </StackPanel>
                     </Grid>
                 </Border>
@@ -250,7 +250,7 @@
                     <Border Style="{StaticResource PanelCard}" Margin="0,0,0,12">
                         <StackPanel>
                             <TextBlock Text="QUICK ACCESS" Foreground="#55DDF7" FontSize="10"/>
-                            <Button Style="{StaticResource ActionButton}" Content="＋  Create backup" HorizontalAlignment="Stretch" Margin="0,15,0,8"/>
+                            <Button Style="{StaticResource ActionButton}" Content="＋  Create backup" HorizontalAlignment="Stretch" Margin="0,15,0,8" Click="NewBackup_Click"/>
                             <Button Style="{StaticResource NavButton}" Content="↻  Restore a backup" HorizontalAlignment="Stretch"/>
                             <Button Style="{StaticResource NavButton}" Content="◷  Configure schedule" HorizontalAlignment="Stretch"/>
                         </StackPanel>
@@ -258,8 +258,8 @@
                     <Border Style="{StaticResource PanelCard}">
                         <StackPanel>
                             <TextBlock Text="SYSTEM ACTIVITY" Foreground="#55DDF7" FontSize="10"/>
-                            <TextBlock Text="Awaiting first operation" FontSize="13" Margin="0,15,0,5"/>
-                            <TextBlock Text="When you create a backup, its progress and events will appear here." TextWrapping="Wrap" Foreground="#7894B2" FontSize="11" LineHeight="18"/>
+                            <TextBlock x:Name="ActivityTitle" Text="Awaiting first operation" FontSize="13" Margin="0,15,0,5"/>
+                            <TextBlock x:Name="ActivityDescription" Text="When you create a backup, its progress and events will appear here." TextWrapping="Wrap" Foreground="#7894B2" FontSize="11" LineHeight="18"/>
                         </StackPanel>
                     </Border>
                 </StackPanel>
