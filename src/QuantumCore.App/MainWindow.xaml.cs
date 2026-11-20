@@ -28,6 +28,12 @@ public partial class MainWindow : Window
         }
     }
 
+    private void Schedules_Click(object sender, RoutedEventArgs e)
+    {
+        var dialog = new SchedulesWindow { Owner = this };
+        dialog.ShowDialog();
+    }
+
     private static string FormatBytes(long bytes)
     {
         string[] units = ["B", "KB", "MB", "GB", "TB"];

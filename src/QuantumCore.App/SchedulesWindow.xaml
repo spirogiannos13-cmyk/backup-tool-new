@@ -1,0 +1,81 @@
+<Window x:Class="QuantumCore.App.SchedulesWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Backup Schedules — Quantum Core" Width="900" Height="760"
+        MinWidth="820" MinHeight="680" WindowStartupLocation="CenterOwner"
+        Background="#0B1627" Foreground="#EDF7FF" FontFamily="Segoe UI">
+    <Window.Resources>
+        <Style TargetType="Button">
+            <Setter Property="Foreground" Value="#EAF8FF"/><Setter Property="Background" Value="#183653"/>
+            <Setter Property="BorderBrush" Value="#315777"/><Setter Property="Padding" Value="12,8"/>
+            <Setter Property="Margin" Value="0,0,8,0"/>
+        </Style>
+        <Style TargetType="TextBox">
+            <Setter Property="Background" Value="#101F33"/><Setter Property="Foreground" Value="#EDF7FF"/>
+            <Setter Property="BorderBrush" Value="#31506F"/><Setter Property="Padding" Value="9,7"/>
+        </Style>
+        <Style TargetType="ComboBox">
+            <Setter Property="Background" Value="#123B60"/><Setter Property="Foreground" Value="#FFFFFF"/>
+            <Setter Property="BorderBrush" Value="#2876A8"/><Setter Property="Padding" Value="7"/>
+        </Style>
+    </Window.Resources>
+    <Grid Margin="28">
+        <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+        <StackPanel Grid.Row="0" Margin="0,0,0,20">
+            <TextBlock Text="QUANTUM CORE / AUTOMATION" Foreground="#55DDF7" FontSize="10"/>
+            <TextBlock Text="Backup schedules" FontSize="28" FontWeight="SemiBold" Margin="0,6,0,4"/>
+            <TextBlock Text="Create automatic daily or weekly backups at 03:00 by default." Foreground="#8CA7C5"/>
+        </StackPanel>
+        <Grid Grid.Row="1">
+            <Grid.ColumnDefinitions><ColumnDefinition Width="1.05*"/><ColumnDefinition Width="1.2*"/></Grid.ColumnDefinitions>
+            <Border Grid.Column="0" Background="#101F33" BorderBrush="#294563" BorderThickness="1" CornerRadius="12" Padding="16" Margin="0,0,12,0">
+                <StackPanel>
+                    <TextBlock Text="NEW SCHEDULE" Foreground="#55DDF7" FontSize="11" FontWeight="SemiBold" Margin="0,0,0,12"/>
+                    <TextBlock Text="SCHEDULE NAME" Foreground="#8CA7C5" FontSize="10"/>
+                    <TextBox x:Name="NameBox" Text="My backup" Margin="0,5,0,12"/>
+                    <TextBlock Text="SOURCE FILES / FOLDERS" Foreground="#8CA7C5" FontSize="10"/>
+                    <ListBox x:Name="SourcesList" Height="130" Background="#0B1627" Foreground="#D9EDFF" BorderBrush="#294563" Margin="0,5,0,7"/>
+                    <StackPanel Orientation="Horizontal">
+                        <Button Content="+ Files" Click="AddFiles_Click"/>
+                        <Button Content="+ Folder" Click="AddFolder_Click" Margin="0"/>
+                    </StackPanel>
+                    <TextBlock Text="DESTINATION" Foreground="#8CA7C5" FontSize="10" Margin="0,14,0,5"/>
+                    <ComboBox x:Name="DestinationCombo" SelectedIndex="0" SelectionChanged="DestinationCombo_SelectionChanged">
+                        <ComboBoxItem Content="Local folder"/><ComboBoxItem Content="MEGA cloud"/>
+                    </ComboBox>
+                    <DockPanel x:Name="LocalPathPanel" Margin="0,7,0,0">
+                        <Button DockPanel.Dock="Right" Content="Browse" Click="Browse_Click" Margin="8,0,0,0"/>
+                        <TextBox x:Name="LocalPathBox" IsReadOnly="True" Text="Choose destination folder"/>
+                    </DockPanel>
+                    <TextBlock Text="REPEAT" Foreground="#8CA7C5" FontSize="10" Margin="0,14,0,5"/>
+                    <ComboBox x:Name="FrequencyCombo" SelectedIndex="0" SelectionChanged="FrequencyCombo_SelectionChanged">
+                        <ComboBoxItem Content="Daily"/><ComboBoxItem Content="Weekly"/>
+                    </ComboBox>
+                    <ComboBox x:Name="DayCombo" SelectedIndex="0" Visibility="Collapsed" Margin="0,7,0,0">
+                        <ComboBoxItem Content="Monday"/><ComboBoxItem Content="Tuesday"/><ComboBoxItem Content="Wednesday"/>
+                        <ComboBoxItem Content="Thursday"/><ComboBoxItem Content="Friday"/><ComboBoxItem Content="Saturday"/><ComboBoxItem Content="Sunday"/>
+                    </ComboBox>
+                    <TextBlock Text="START TIME (24-HOUR)" Foreground="#8CA7C5" FontSize="10" Margin="0,14,0,5"/>
+                    <TextBox x:Name="TimeBox" Text="03:00"/>
+                    <Button Content="＋  SAVE &amp; SCHEDULE" Background="#087FC4" BorderBrush="#20C6E8" FontWeight="SemiBold"
+                            HorizontalAlignment="Stretch" Margin="0,18,0,0" Click="SaveSchedule_Click"/>
+                </StackPanel>
+            </Border>
+            <Border Grid.Column="1" Background="#101F33" BorderBrush="#294563" BorderThickness="1" CornerRadius="12" Padding="16">
+                <DockPanel>
+                    <StackPanel DockPanel.Dock="Top" Margin="0,0,0,12">
+                        <TextBlock Text="ACTIVE AUTOMATIONS" Foreground="#55DDF7" FontSize="11" FontWeight="SemiBold"/>
+                        <TextBlock Text="Tasks are registered with Windows Task Scheduler." Foreground="#8CA7C5" FontSize="11" Margin="0,5,0,0"/>
+                    </StackPanel>
+                    <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,12,0,0">
+                        <Button Content="Disconnect MEGA" Click="DisconnectMega_Click"/>
+                        <Button Content="Remove selected" Click="RemoveSchedule_Click" Margin="0"/>
+                    </StackPanel>
+                    <ListBox x:Name="SchedulesList" Background="#0B1627" Foreground="#D9EDFF" BorderBrush="#294563" Padding="7"/>
+                </DockPanel>
+            </Border>
+        </Grid>
+        <TextBlock Grid.Row="2" Text="Scheduled tasks run under your Windows account while you are signed in. The PC must be awake and connected for the scheduled time."
+                   Foreground="#7894B2" FontSize="11" TextWrapping="Wrap" Margin="2,16,2,0"/>
+    </Grid>
+</Window>

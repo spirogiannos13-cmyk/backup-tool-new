@@ -64,14 +64,21 @@ public partial class BackupWindow : Window
         string? megaEmail = null;
         string? megaPassword = null;
         string? loginMfaCode = null;
+        bool rememberMegaAccount = false;
+        StoredMegaAccount? savedMegaAccount = null;
 
-        if (useMega)
+        if (useMega && MegaAccountStore.TryLoad(out var storedAccount) && storedAccount is not null)
+        {
+            savedMegaAccount = storedAccount;
+        }
+        else if (useMega)
         {
             var login = new MegaLoginWindow { Owner = this };
             if (login.ShowDialog() != true) return;
             megaEmail = login.Email;
             megaPassword = login.Password;
             loginMfaCode = login.MfaCode;
+            rememberMegaAccount = login.RememberAccount;
         }
         else if (string.IsNullOrWhiteSpace(DestinationBox.Text) || !Directory.Exists(DestinationBox.Text))
         {
@@ -152,8 +159,18 @@ public partial class BackupWindow : Window
                 var client = new MegaApiClient();
                 try
                 {
-                    await client.LoginAsync(megaEmail!, megaPassword!, loginMfaCode)
-                        .WaitAsync(TimeSpan.FromSeconds(45), _cancellation.Token);
+                    if (savedMegaAccount is not null)
+                    {
+                        await client.LoginAsync(savedMegaAccount.ToToken())
+                            .WaitAsync(TimeSpan.FromSeconds(45), _cancellation.Token);
+                    }
+                    else
+                    {
+                        var sessionToken = await client.LoginAsync(megaEmail!, megaPassword!, loginMfaCode)
+                            .WaitAsync(TimeSpan.FromSeconds(45), _cancellation.Token);
+                        if (rememberMegaAccount)
+                            MegaAccountStore.Save(megaEmail!, sessionToken);
+                    }
                     BackupProgress.IsIndeterminate = false;
                     BackupProgress.Value = 0;
                     ProgressLabel.Text = "0%";
@@ -175,7 +192,7 @@ public partial class BackupWindow : Window
                 finally
                 {
                     BackupProgress.IsIndeterminate = false;
-                    if (client.IsLoggedIn) client.Logout();
+                    // Do not log out: MEGA logout invalidates the session token saved for future backups.
                 }
             }
             else

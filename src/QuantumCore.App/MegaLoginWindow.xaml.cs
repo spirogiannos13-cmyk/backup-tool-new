@@ -7,6 +7,7 @@ public partial class MegaLoginWindow : Window
     public string Email => EmailBox.Text.Trim();
     public string Password => PasswordInput.Password;
     public string MfaCode => MfaBox.Text.Trim();
+    public bool RememberAccount => RememberAccountCheck.IsChecked == true;
 
     public MegaLoginWindow()
     {

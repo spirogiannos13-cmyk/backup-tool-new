@@ -12,6 +12,7 @@
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
@@ -35,10 +36,11 @@
             <TextBox x:Name="MfaBox" Height="42" VerticalContentAlignment="Center"
                      Background="#101F33" Foreground="#EDF7FF" BorderBrush="#31506F" Padding="11" MaxLength="8"/>
         </StackPanel>
-        <TextBlock Grid.Row="4" Text="Your password and two-factor code are used only for this sign-in session and are not saved by Quantum Core."
+        <CheckBox x:Name="RememberAccountCheck" Grid.Row="4" IsChecked="True" Content="Remember this MEGA account on this PC (encrypted session)" Foreground="#55DDF7" FontSize="11" Margin="0,0,0,12"/>
+        <TextBlock Grid.Row="5" Text="Your password is never saved. Only the MEGA session token is encrypted with Windows DPAPI."
                    Foreground="#7894B2" FontSize="11" TextWrapping="Wrap" Margin="0,0,0,12"/>
-        <TextBlock x:Name="ErrorText" Grid.Row="5" Foreground="#FF8C9B" FontSize="11" TextWrapping="Wrap" VerticalAlignment="Top"/>
-        <StackPanel Grid.Row="6" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,18,0,0">
+        <TextBlock x:Name="ErrorText" Grid.Row="6" Foreground="#FF8C9B" FontSize="11" TextWrapping="Wrap" VerticalAlignment="Top"/>
+        <StackPanel Grid.Row="7" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,18,0,0">
             <Button Content="Cancel" Padding="18,10" Margin="0,0,10,0" MinWidth="92" Click="Cancel_Click"/>
             <Button Content="CONNECT" Padding="22,10" MinWidth="120"
                     Background="#087FC4" Foreground="White" BorderBrush="#20C6E8" FontWeight="SemiBold" Click="Connect_Click"/>
