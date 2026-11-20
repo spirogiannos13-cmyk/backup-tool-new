@@ -146,10 +146,18 @@ public partial class BackupWindow : Window
                 _cancellation.Token.ThrowIfCancellationRequested();
 
                 StatusText.Text = "Connecting to MEGA…";
+                BackupProgress.IsIndeterminate = true;
+                BackupProgress.Value = 0;
+                ProgressLabel.Text = "CONNECTING";
                 var client = new MegaApiClient();
                 try
                 {
-                    await client.LoginAsync(megaEmail!, megaPassword!, loginMfaCode);
+                    await client.LoginAsync(megaEmail!, megaPassword!, loginMfaCode)
+                        .WaitAsync(TimeSpan.FromSeconds(45), _cancellation.Token);
+                    BackupProgress.IsIndeterminate = false;
+                    BackupProgress.Value = 0;
+                    ProgressLabel.Text = "0%";
+                    StatusText.Text = "Connected to MEGA. Preparing upload…";
                     _cancellation.Token.ThrowIfCancellationRequested();
                     var root = client.GetNodes().Single(n => n.Type == NodeType.Root);
                     var remoteFolder = client.CreateFolder(backupName, root);
@@ -166,6 +174,7 @@ public partial class BackupWindow : Window
                 }
                 finally
                 {
+                    BackupProgress.IsIndeterminate = false;
                     if (client.IsLoggedIn) client.Logout();
                 }
             }
@@ -182,8 +191,17 @@ public partial class BackupWindow : Window
                 "Quantum Core", MessageBoxButton.OK, MessageBoxImage.Information);
             DialogResult = true;
         }
+        catch (TimeoutException)
+        {
+            BackupProgress.IsIndeterminate = false;
+            StatusText.Text = "MEGA sign-in timed out after 45 seconds. Check your internet connection and try again.";
+            StartButton.IsEnabled = true;
+            CancelButton.Content = "Close";
+            MessageBox.Show(this, "MEGA did not respond within 45 seconds. Check your internet connection, firewall or VPN, then try again.", "MEGA connection timed out", MessageBoxButton.OK, MessageBoxImage.Warning);
+        }
         catch (OperationCanceledException)
         {
+            BackupProgress.IsIndeterminate = false;
             StatusText.Text = "Backup cancelled. Any partial local data remains in the temporary or destination folder.";
             StartButton.IsEnabled = true;
             CancelButton.Content = "Close";
@@ -197,6 +215,7 @@ public partial class BackupWindow : Window
         }
         finally
         {
+            BackupProgress.IsIndeterminate = false;
             if (temporaryFolder is not null && Directory.Exists(temporaryFolder))
             {
                 try { Directory.Delete(temporaryFolder, true); } catch { }
