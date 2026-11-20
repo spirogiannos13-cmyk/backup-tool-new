@@ -28,6 +28,12 @@ public partial class MainWindow : Window
         }
     }
 
+    private void SqlConnections_Click(object sender, RoutedEventArgs e)
+    {
+        var dialog = new SqlConnectionManagerWindow { Owner = this };
+        dialog.ShowDialog();
+    }
+
     private void Schedules_Click(object sender, RoutedEventArgs e)
     {
         var dialog = new SchedulesWindow { Owner = this };
