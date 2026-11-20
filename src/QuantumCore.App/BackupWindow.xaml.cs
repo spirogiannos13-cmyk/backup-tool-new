@@ -159,7 +159,6 @@ public partial class BackupWindow : Window
                 var client = new MegaApiClient();
                 try
                 {
-                    LogonSessionToken sessionToken;
                     if (savedMegaAccount is not null)
                     {
                         await client.LoginAsync(savedMegaAccount.ToToken())
@@ -167,7 +166,7 @@ public partial class BackupWindow : Window
                     }
                     else
                     {
-                        sessionToken = await client.LoginAsync(megaEmail!, megaPassword!, loginMfaCode)
+                        var sessionToken = await client.LoginAsync(megaEmail!, megaPassword!, loginMfaCode)
                             .WaitAsync(TimeSpan.FromSeconds(45), _cancellation.Token);
                         if (rememberMegaAccount)
                             MegaAccountStore.Save(megaEmail!, sessionToken);
