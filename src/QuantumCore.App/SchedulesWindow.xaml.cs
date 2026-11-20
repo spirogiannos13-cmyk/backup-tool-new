@@ -126,6 +126,21 @@ public partial class SchedulesWindow : Window
         }
     }
 
+    private void DisconnectMega_Click(object sender, RoutedEventArgs e)
+    {
+        if (!MegaAccountStore.TryLoad(out var account) || account is null)
+        {
+            MessageBox.Show(this, "No saved MEGA account was found.", "MEGA account", MessageBoxButton.OK, MessageBoxImage.Information);
+            return;
+        }
+        var result = MessageBox.Show(this, $"Remove the saved MEGA session for {account.Email}? Existing MEGA schedules will remain but cannot run until you connect again.", "Disconnect MEGA", MessageBoxButton.YesNo, MessageBoxImage.Warning);
+        if (result == MessageBoxResult.Yes)
+        {
+            MegaAccountStore.Remove();
+            MessageBox.Show(this, "The saved MEGA session was removed from this Windows user profile.", "MEGA disconnected", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+    }
+
     private void RefreshSchedules()
     {
         SchedulesList.Items.Clear();
