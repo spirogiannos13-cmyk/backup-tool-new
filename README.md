@@ -27,7 +27,7 @@ dotnet build .\src\QuantumCore.App\QuantumCore.App.csproj
 dotnet run --project .\src\QuantumCore.App\QuantumCore.App.csproj
 ```
 
-The first pull request establishes the desktop UI foundation only. Backup and restore operations, scheduling, persistence, and destination management will be implemented in subsequent increments.
+The desktop UI foundation is in place. The first backup workflow now supports selecting files and folders, choosing an existing destination, copying selected data into a timestamped `QuantumCore_...` folder, progress reporting, and cancellation. Backup history is currently session-only; restore, scheduling, persistent history, and destination management are future increments.
 
 ## Design direction
 
