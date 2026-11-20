@@ -29,19 +29,32 @@
         </Style>
         <Style x:Key="DarkComboBoxItem" TargetType="ComboBoxItem">
             <Setter Property="Foreground" Value="#EDF7FF"/>
-            <Setter Property="Background" Value="#101F33"/>
+            <Setter Property="Background" Value="#102B49"/>
             <Setter Property="Padding" Value="10,7"/>
             <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
-            <Style.Triggers>
-                <Trigger Property="IsHighlighted" Value="True">
-                    <Setter Property="Background" Value="#1B4568"/>
-                    <Setter Property="Foreground" Value="#FFFFFF"/>
-                </Trigger>
-                <Trigger Property="IsSelected" Value="True">
-                    <Setter Property="Background" Value="#173B5B"/>
-                    <Setter Property="Foreground" Value="#55E5FF"/>
-                </Trigger>
-            </Style.Triggers>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ComboBoxItem">
+                        <Border x:Name="ItemBorder" Background="{TemplateBinding Background}" Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                              VerticalAlignment="{TemplateBinding VerticalContentAlignment}"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsHighlighted" Value="True">
+                                <Setter TargetName="ItemBorder" Property="Background" Value="#17659A"/>
+                                <Setter Property="Foreground" Value="#FFFFFF"/>
+                            </Trigger>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter TargetName="ItemBorder" Property="Background" Value="#145487"/>
+                                <Setter Property="Foreground" Value="#FFFFFF"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter Property="Foreground" Value="#71869B"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
         </Style>
     </Window.Resources>
     <Grid Margin="28">
@@ -74,7 +87,7 @@
         <StackPanel Grid.Row="3" Margin="0,18,0,0">
             <TextBlock Text="02  BACKUP DESTINATION" Foreground="#55DDF7" FontSize="11" FontWeight="SemiBold" Margin="0,0,0,9"/>
             <ComboBox x:Name="DestinationModeCombo" SelectedIndex="0" SelectionChanged="DestinationModeCombo_SelectionChanged"
-                      Background="#101F33" Foreground="#EDF7FF" BorderBrush="#31506F" Padding="8" Margin="0,0,0,9"
+                      Background="#123B60" Foreground="#FFFFFF" BorderBrush="#2876A8" Padding="8" Margin="0,0,0,9"
                       ItemContainerStyle="{StaticResource DarkComboBoxItem}">
                 <ComboBoxItem Content="Local folder" Background="#101F33" Foreground="#EDF7FF"/>
                 <ComboBoxItem Content="MEGA cloud" Background="#101F33" Foreground="#EDF7FF"/>
