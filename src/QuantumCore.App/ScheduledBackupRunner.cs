@@ -87,7 +87,7 @@ public static class BackupExecutionService
                 if (!MegaAccountStore.TryLoad(out var account) || account is null)
                     throw new InvalidOperationException("Saved MEGA session is missing or could not be decrypted.");
                 var client = new MegaApiClient();
-                await client.LoginAsync(account.ToToken());
+                await client.LoginAsync(account.ToToken()).WaitAsync(TimeSpan.FromSeconds(45), token);
                 var root = client.GetNodes().Single(n => n.Type == NodeType.Root);
                 var folder = client.CreateFolder(backupName, root);
                 await client.UploadFileAsync(archive, folder, null, token);
