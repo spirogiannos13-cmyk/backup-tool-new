@@ -62,7 +62,7 @@ public partial class SchedulesWindow : Window
             MessageBox.Show(this, "Add at least one existing source file or folder.", "Sources required", MessageBoxButton.OK, MessageBoxImage.Information);
             return;
         }
-        if (!TimeSpan.TryParseExact(TimeBox.Text.Trim(), @"hh:mm", null, out var time) || time.TotalHours >= 24)
+        if (!TimeSpan.TryParseExact(TimeBox.Text.Trim(), @"hh\:mm", null, out var time) || time.TotalHours >= 24)
         {
             MessageBox.Show(this, "Enter a valid time in 24-hour format, for example 03:00.", "Invalid time", MessageBoxButton.OK, MessageBoxImage.Warning);
             return;
