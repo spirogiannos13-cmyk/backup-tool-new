@@ -68,6 +68,7 @@
                         <TextBlock Text="Tasks are registered with Windows Task Scheduler." Foreground="#8CA7C5" FontSize="11" Margin="0,5,0,0"/>
                     </StackPanel>
                     <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,12,0,0">
+                        <Button Content="Disconnect MEGA" Click="DisconnectMega_Click"/>
                         <Button Content="Remove selected" Click="RemoveSchedule_Click" Margin="0"/>
                     </StackPanel>
                     <ListBox x:Name="SchedulesList" Background="#0B1627" Foreground="#D9EDFF" BorderBrush="#294563" Padding="7"/>
