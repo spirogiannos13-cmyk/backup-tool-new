@@ -7,7 +7,7 @@
     <Grid Margin="30">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/><RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/><RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/><RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
         <StackPanel Grid.Row="0" Margin="0,0,0,24">
@@ -23,9 +23,13 @@
             <TextBlock Text="PASSWORD" Foreground="#8CA7C5" FontSize="10" Margin="0,0,0,7"/>
             <PasswordBox x:Name="PasswordInput" Background="#101F33" Foreground="#EDF7FF" BorderBrush="#31506F" Padding="11"/>
         </StackPanel>
-        <TextBlock Grid.Row="3" Text="Your password is used only for this sign-in session and is not saved by Quantum Core." Foreground="#7894B2" FontSize="11" TextWrapping="Wrap" Margin="0,0,0,12"/>
-        <TextBlock x:Name="ErrorText" Grid.Row="4" Foreground="#FF8C9B" FontSize="11" TextWrapping="Wrap" VerticalAlignment="Top"/>
-        <StackPanel Grid.Row="5" Orientation="Horizontal" HorizontalAlignment="Right">
+        <StackPanel Grid.Row="3" Margin="0,0,0,12">
+            <TextBlock Text="TWO-FACTOR AUTHENTICATION CODE (OPTIONAL)" Foreground="#8CA7C5" FontSize="10" Margin="0,0,0,7"/>
+            <TextBox x:Name="MfaBox" Background="#101F33" Foreground="#EDF7FF" BorderBrush="#31506F" Padding="11" MaxLength="8"/>
+        </StackPanel>
+        <TextBlock Grid.Row="4" Text="Your password and two-factor code are used only for this sign-in session and are not saved by Quantum Core." Foreground="#7894B2" FontSize="11" TextWrapping="Wrap" Margin="0,0,0,12"/>
+        <TextBlock x:Name="ErrorText" Grid.Row="5" Foreground="#FF8C9B" FontSize="11" TextWrapping="Wrap" VerticalAlignment="Top"/>
+        <StackPanel Grid.Row="6" Orientation="Horizontal" HorizontalAlignment="Right">
             <Button Content="Cancel" Padding="16,9" Margin="0,0,8,0" Click="Cancel_Click"/>
             <Button Content="CONNECT" Padding="20,9" Background="#087FC4" Foreground="White" BorderBrush="#20C6E8" Click="Connect_Click"/>
         </StackPanel>
