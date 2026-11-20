@@ -8,16 +8,6 @@ Quantum Core is a Windows desktop backup application, designed around the Quantu
 - .NET 10
 - WPF (Windows Presentation Foundation)
 
-## Project structure
-
-```
-src/
-  QuantumCore.App/
-    App.xaml
-    MainWindow.xaml
-    QuantumCore.App.csproj
-```
-
 ## Build and run
 
 Install the .NET 10 SDK on a Windows development machine, then run:
@@ -27,7 +17,19 @@ dotnet build .\src\QuantumCore.App\QuantumCore.App.csproj
 dotnet run --project .\src\QuantumCore.App\QuantumCore.App.csproj
 ```
 
-The desktop UI foundation is in place. The first backup workflow now supports selecting files and folders, choosing an existing destination, copying selected data into a timestamped `QuantumCore_...` folder, progress reporting, and cancellation. Backup history is currently session-only; restore, scheduling, persistent history, and destination management are future increments.
+## Backup destinations
+
+- Local folder backups
+- MEGA cloud uploads using an MEGA account sign-in
+- MEGA backups are packaged as a ZIP archive before upload
+- MEGA credentials are requested for each upload and are not written to disk by Quantum Core
+- The app reports cloud completion only after the upload operation succeeds
+
+The MEGA integration uses the MIT-licensed MegaApiClient package. The package is community-maintained and is not an official MEGA SDK.
+
+## Current scope
+
+Backup history is session-only. Restore, scheduling, persistent history, destination management, resumable uploads, and saved encrypted sessions are future increments.
 
 ## Design direction
 
