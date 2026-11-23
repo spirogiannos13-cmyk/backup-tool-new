@@ -170,11 +170,13 @@ public static class BusinessBackupExecutionService
                 // Use a fresh client for every attempt. Never start a retry until the
                 // previous UploadFileAsync task has actually completed after cancellation.
                 var client = new MegaApiClient();
-                using var attemptCancellation = CancellationTokenSource.CreateLinkedTokenSource(token);
                 using var totalTimeout = new CancellationTokenSource(TimeSpan.FromMinutes(totalAttemptTimeoutMinutes));
-                using var idleTimeout = new CancellationTokenSource();
+                using var idleTimeout = new CancellationTokenSource(TimeSpan.FromSeconds(idleTimeoutSeconds));
                 using var uploadCancellation = CancellationTokenSource.CreateLinkedTokenSource(
                     token, totalTimeout.Token, idleTimeout.Token);
+
+                using var idleRegistration = idleTimeout.Token.Register(() => uploadCancellation.Cancel());
+                using var timeoutRegistration = totalTimeout.Token.Register(() => uploadCancellation.Cancel());
 
                 try
                 {
@@ -215,9 +217,6 @@ public static class BusinessBackupExecutionService
                     // The timeout cancels the library's own upload token, then we await
                     // the task itself. This prevents overlapping uploads and file cleanup
                     // while MegaApiClient is still reading the ZIP.
-                    using var timeoutRegistration = totalTimeout.Token.Register(() => uploadCancellation.Cancel());
-                    using var idleRegistration = idleTimeout.Token.Register(() => uploadCancellation.Cancel());
-
                     try
                     {
                         uploaded = await uploadTask;
