@@ -7,6 +7,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <RootNamespace>QuantumCore.App</RootNamespace>
     <AssemblyName>QuantumCore</AssemblyName>
+    <ApplicationIcon>Assets\QuantumCore.ico</ApplicationIcon>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="MegaApiClient" Version="1.10.5" />
