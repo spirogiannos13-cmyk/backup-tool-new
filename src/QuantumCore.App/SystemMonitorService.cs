@@ -21,18 +21,15 @@ public static class SystemMonitorService
     private static SystemMonitorSnapshot Read(CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
-    {
+
         string cpu = "Unavailable", memory = "Unavailable", disk = "Unavailable";
         string temperature = "Not reported by hardware";
         double memoryPercent = 0, diskPercent = 0;
         string windows = Environment.OSVersion.VersionString;
 
-        cancellationToken.ThrowIfCancellationRequested();
-        cancellationToken.ThrowIfCancellationRequested();
-        cancellationToken.ThrowIfCancellationRequested();
-        cancellationToken.ThrowIfCancellationRequested();
         try
         {
+            cancellationToken.ThrowIfCancellationRequested();
             using var search = new ManagementObjectSearcher("SELECT Name FROM Win32_Processor");
             foreach (ManagementObject item in search.Get())
             {
@@ -40,10 +37,12 @@ public static class SystemMonitorService
                 break;
             }
         }
+        catch (OperationCanceledException) { throw; }
         catch { }
 
         try
         {
+            cancellationToken.ThrowIfCancellationRequested();
             using var search = new ManagementObjectSearcher("SELECT TotalVisibleMemorySize, FreePhysicalMemory, Caption FROM Win32_OperatingSystem");
             foreach (ManagementObject item in search.Get())
             {
@@ -55,10 +54,12 @@ public static class SystemMonitorService
                 break;
             }
         }
+        catch (OperationCanceledException) { throw; }
         catch { }
 
         try
         {
+            cancellationToken.ThrowIfCancellationRequested();
             using var search = new ManagementObjectSearcher("SELECT DeviceID, Size, FreeSpace FROM Win32_LogicalDisk WHERE DriveType = 3");
             var drives = new List<string>();
             foreach (ManagementObject item in search.Get())
@@ -72,10 +73,12 @@ public static class SystemMonitorService
             }
             if (drives.Count > 0) disk = string.Join("     •     ", drives);
         }
+        catch (OperationCanceledException) { throw; }
         catch { }
 
         try
         {
+            cancellationToken.ThrowIfCancellationRequested();
             using var search = new ManagementObjectSearcher(@"root\WMI", "SELECT CurrentTemperature FROM MSAcpi_ThermalZoneTemperature");
             foreach (ManagementObject item in search.Get())
             {
@@ -88,9 +91,19 @@ public static class SystemMonitorService
                 }
             }
         }
+        catch (OperationCanceledException) { throw; }
         catch { }
 
         cancellationToken.ThrowIfCancellationRequested();
-        return new SystemMonitorSnapshot { Cpu = cpu, Memory = memory, Disk = disk, Windows = windows, Temperature = temperature, MemoryPercent = memoryPercent, DiskPercent = diskPercent };
+        return new SystemMonitorSnapshot
+        {
+            Cpu = cpu,
+            Memory = memory,
+            Disk = disk,
+            Windows = windows,
+            Temperature = temperature,
+            MemoryPercent = memoryPercent,
+            DiskPercent = diskPercent
+        };
     }
 }
