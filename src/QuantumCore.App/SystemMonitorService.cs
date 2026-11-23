@@ -15,15 +15,22 @@ public sealed class SystemMonitorSnapshot
 
 public static class SystemMonitorService
 {
-    public static Task<SystemMonitorSnapshot> ReadAsync() => Task.Run(Read);
+    public static Task<SystemMonitorSnapshot> ReadAsync(CancellationToken cancellationToken = default) =>
+        Task.Run(() => Read(cancellationToken), cancellationToken);
 
-    private static SystemMonitorSnapshot Read()
+    private static SystemMonitorSnapshot Read(CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
     {
         string cpu = "Unavailable", memory = "Unavailable", disk = "Unavailable";
         string temperature = "Not reported by hardware";
         double memoryPercent = 0, diskPercent = 0;
         string windows = Environment.OSVersion.VersionString;
 
+        cancellationToken.ThrowIfCancellationRequested();
+        cancellationToken.ThrowIfCancellationRequested();
+        cancellationToken.ThrowIfCancellationRequested();
+        cancellationToken.ThrowIfCancellationRequested();
         try
         {
             using var search = new ManagementObjectSearcher("SELECT Name FROM Win32_Processor");
@@ -83,6 +90,7 @@ public static class SystemMonitorService
         }
         catch { }
 
+        cancellationToken.ThrowIfCancellationRequested();
         return new SystemMonitorSnapshot { Cpu = cpu, Memory = memory, Disk = disk, Windows = windows, Temperature = temperature, MemoryPercent = memoryPercent, DiskPercent = diskPercent };
     }
 }
