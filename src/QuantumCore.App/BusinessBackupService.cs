@@ -132,6 +132,10 @@ public static class BusinessBackupService
             Verb = "runas",
             WorkingDirectory = Path.GetDirectoryName(targetPath)!
         };
+        // Explicitly identify this machine as the source print server.
+        // PrintBRM's documented backup syntax includes -s \\ServerName.
+        start.ArgumentList.Add("-s");
+        start.ArgumentList.Add(@"\\" + Environment.MachineName);
         start.ArgumentList.Add("-b");
         start.ArgumentList.Add("-f");
         start.ArgumentList.Add(targetPath);
@@ -155,8 +159,32 @@ public static class BusinessBackupService
         }
 
         if (process.ExitCode != 0 || !File.Exists(targetPath) || new FileInfo(targetPath).Length == 0)
+        {
+            string spoolerState = "unknown";
+            try
+            {
+                using var service = new Process
+                {
+                    StartInfo = new ProcessStartInfo("sc.exe", "query Spooler")
+                    {
+                        UseShellExecute = false,
+                        RedirectStandardOutput = true,
+                        RedirectStandardError = true,
+                        CreateNoWindow = true
+                    }
+                };
+                service.Start();
+                string serviceOutput = await service.StandardOutput.ReadToEndAsync(token);
+                await service.WaitForExitAsync(token);
+                spoolerState = serviceOutput.Contains("RUNNING", StringComparison.OrdinalIgnoreCase) ? "RUNNING" : serviceOutput.Trim();
+            }
+            catch (Exception ex) { spoolerState = ex.Message; }
+
             throw new InvalidOperationException(
-                $"Windows PrintBRM could not export printers (exit code {process.ExitCode}). Run Quantum Core with an administrator account and verify that Windows Print Management is available.");
+                $"Windows PrintBRM did not create a valid printer export. Exit code: {process.ExitCode}. " +
+                $"Computer: {Environment.MachineName}. Print Spooler: {spoolerState}. " +
+                $"Expected file: {targetPath}. Verify the Print Spooler service and Windows Print Management, then check Event Viewer > Applications and Services Logs > Microsoft > Windows > PrintBRM > Admin.");
+        }
 
         token.ThrowIfCancellationRequested();
     }
