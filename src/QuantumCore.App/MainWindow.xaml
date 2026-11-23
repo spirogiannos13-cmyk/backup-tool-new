@@ -23,6 +23,7 @@
                             <Trigger Property="IsMouseOver" Value="True">
                                 <Setter TargetName="Surface" Property="Background" Value="#183653"/>
                                 <Setter Property="Foreground" Value="#55E5FF"/>
+                                <Setter TargetName="Surface" Property="Effect"><Setter.Value><DropShadowEffect Color="#25DFFF" BlurRadius="14" ShadowDepth="0" Opacity="0.32"/></Setter.Value></Setter>
                             </Trigger>
                             <Trigger Property="IsPressed" Value="True">
                                 <Setter TargetName="Surface" Property="Background" Value="#21496D"/>
@@ -68,6 +69,7 @@
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="CornerRadius" Value="14"/>
             <Setter Property="Padding" Value="20"/>
+            <Setter Property="Effect"><Setter.Value><DropShadowEffect Color="#168DCE" BlurRadius="18" ShadowDepth="0" Opacity="0.13"/></Setter.Value></Setter>
         </Style>
         <Style x:Key="SectionTitle" TargetType="TextBlock">
             <Setter Property="Foreground" Value="#55DDF7"/>
