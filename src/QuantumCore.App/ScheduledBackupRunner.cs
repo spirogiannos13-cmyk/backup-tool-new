@@ -7,105 +7,112 @@ public static class ScheduledBackupRunner
 {
     public static async Task RunAsync(string scheduleId)
     {
-        var logPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "QuantumCore", "scheduled-backups.log");
+        string logPath = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+            "QuantumCore", "scheduled-backups.log");
         Directory.CreateDirectory(Path.GetDirectoryName(logPath)!);
-        void Log(string message) => File.AppendAllText(logPath, $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] {message}{Environment.NewLine}");
+        void Log(string message) => File.AppendAllText(logPath,
+            $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] {message}{Environment.NewLine}");
 
+        BackupSchedule? schedule = null;
+        DateTime started = DateTime.Now;
+        var history = new ScheduledBackupHistoryEntry { ScheduleId = scheduleId, StartedAt = started };
         try
         {
-            var schedule = ScheduleStore.Load().FirstOrDefault(s => s.Id == scheduleId)
+            schedule = ScheduleStore.Load().FirstOrDefault(s => s.Id == scheduleId)
                 ?? throw new InvalidOperationException("Scheduled backup definition was not found.");
-            Log($"Starting '{schedule.Name}'.");
-            await BackupExecutionService.RunAsync(schedule, CancellationToken.None);
-            Log($"Completed '{schedule.Name}'.");
+            history.ScheduleName = schedule.Name;
+            Log($"Starting full Business Backup '{schedule.Name}'.");
+
+            long bytes = await BusinessBackupExecutionService.RunAsync(schedule, CancellationToken.None);
+            history.Success = true;
+            history.BytesWritten = bytes;
+            history.Destination = "MEGA:/QuantumCore_Backup.zip";
+            history.Message = $"Completed successfully. Business backup payload: {FormatBytes(bytes)}.";
+            Log(history.Message);
         }
         catch (Exception ex)
         {
+            history.Success = false;
+            history.Message = ex.ToString();
             Log("FAILED: " + ex);
             throw;
         }
+        finally
+        {
+            history.FinishedAt = DateTime.Now;
+            try { ScheduledBackupHistoryStore.Add(history); }
+            catch (Exception historyError) { Log("Could not write history: " + historyError); }
+        }
+    }
+
+    private static string FormatBytes(long bytes)
+    {
+        string[] units = ["B", "KB", "MB", "GB", "TB"];
+        double size = bytes;
+        int unit = 0;
+        while (size >= 1024 && unit < units.Length - 1) { size /= 1024; unit++; }
+        return $"{size:0.##} {units[unit]}";
     }
 }
 
-public static class BackupExecutionService
+public static class BusinessBackupExecutionService
 {
-    public static async Task RunAsync(BackupSchedule schedule, CancellationToken token)
+    public static async Task<long> RunAsync(BackupSchedule schedule, CancellationToken token)
     {
-        if (schedule.Sources.Count == 0) throw new InvalidOperationException("The schedule has no source files or folders.");
-        bool toMega = schedule.DestinationType.Equals("MEGA", StringComparison.OrdinalIgnoreCase);
-        if (toMega && !MegaAccountStore.TryLoad(out _))
-            throw new InvalidOperationException("No saved MEGA account is available. Open Quantum Core and connect your MEGA account again.");
+        if (!schedule.BackupProfile.Equals("Business", StringComparison.OrdinalIgnoreCase))
+            throw new InvalidOperationException("This scheduled task is not configured for the full Business Backup profile.");
+        if (!schedule.DestinationType.Equals("MEGA", StringComparison.OrdinalIgnoreCase))
+            throw new InvalidOperationException("The full scheduled Business Backup currently requires MEGA Cloud as its destination.");
+        if (string.IsNullOrWhiteSpace(schedule.SqlConnectionId) || string.IsNullOrWhiteSpace(schedule.DatabaseName))
+            throw new InvalidOperationException("The schedule is missing its saved SQL connection or database selection.");
 
-        string backupName = "QuantumCore_" + DateTime.Now.ToString("yyyyMMdd_HHmmss");
-        string? temporary = null;
-        string backupRoot;
-        if (toMega)
-        {
-            temporary = Path.Combine(Path.GetTempPath(), "QuantumCore_Scheduled_" + Guid.NewGuid().ToString("N"));
-            backupRoot = Path.Combine(temporary, backupName);
-        }
-        else
-        {
-            if (!Directory.Exists(schedule.LocalDestination))
-                throw new DirectoryNotFoundException("The scheduled local destination does not exist: " + schedule.LocalDestination);
-            backupRoot = Path.Combine(schedule.LocalDestination, backupName);
-        }
+        var sqlConnection = SqlConnectionStore.Load().FirstOrDefault(c => c.Id == schedule.SqlConnectionId)
+            ?? throw new InvalidOperationException("The saved SQL connection for this schedule was not found. Open Quantum Core and review Manage SQL.");
+        if (!MegaAccountStore.TryLoad(out var account) || account is null)
+            throw new InvalidOperationException("The saved MEGA session is missing or expired. Open Quantum Core, sign in to MEGA, enable Remember account, and update the schedule.");
 
+        string stagingParent = await SqlBackupService.GetBackupStagingParentAsync(sqlConnection, token);
+        string staging = Path.Combine(stagingParent, ".QuantumCore_Scheduled_" + Guid.NewGuid().ToString("N"));
+        string archive = Path.Combine(stagingParent, "QuantumCore_Backup_" + Guid.NewGuid().ToString("N") + ".zip");
         try
         {
-            Directory.CreateDirectory(backupRoot);
-            for (int i = 0; i < schedule.Sources.Count; i++)
-            {
-                token.ThrowIfCancellationRequested();
-                string source = schedule.Sources[i];
-                if (File.Exists(source))
-                {
-                    string targetFolder = Path.Combine(backupRoot, $"{i + 1}_{MakeSafeName(Path.GetFileNameWithoutExtension(source))}");
-                    Directory.CreateDirectory(targetFolder);
-                    File.Copy(source, Path.Combine(targetFolder, Path.GetFileName(source)), overwrite: false);
-                }
-                else if (Directory.Exists(source))
-                {
-                    string rootName = Path.GetFileName(Path.TrimEndingDirectorySeparator(source));
-                    foreach (string file in Directory.EnumerateFiles(source, "*", SearchOption.AllDirectories))
-                    {
-                        token.ThrowIfCancellationRequested();
-                        string relative = Path.GetRelativePath(source, file);
-                        string target = Path.Combine(backupRoot, $"{i + 1}_{MakeSafeName(rootName)}", relative);
-                        Directory.CreateDirectory(Path.GetDirectoryName(target)!);
-                        File.Copy(file, target, overwrite: false);
-                    }
-                }
-                else
-                    throw new FileNotFoundException("A scheduled source no longer exists.", source);
-            }
+            Directory.CreateDirectory(staging);
+            var result = await BusinessBackupService.BuildAsync(sqlConnection, schedule.DatabaseName, staging, token);
+            token.ThrowIfCancellationRequested();
 
-            if (toMega)
-            {
-                string archive = Path.Combine(temporary!, backupName + ".zip");
-                await Task.Run(() => ZipFile.CreateFromDirectory(backupRoot, archive, CompressionLevel.Optimal, false), token);
-                if (!MegaAccountStore.TryLoad(out var account) || account is null)
-                    throw new InvalidOperationException("Saved MEGA session is missing or could not be decrypted.");
-                var client = new MegaApiClient();
-                await client.LoginAsync(account.ToToken()).WaitAsync(TimeSpan.FromSeconds(45), token);
-                var root = client.GetNodes().Single(n => n.Type == NodeType.Root);
-                var folder = client.CreateFolder(backupName, root);
-                await client.UploadFileAsync(archive, folder, null, token);
-                // Keep the MEGA session active: logging out invalidates the saved session token.
-            }
+            await Task.Run(() => ZipFile.CreateFromDirectory(staging, archive, CompressionLevel.Optimal, false), token);
+            if (!File.Exists(archive) || new FileInfo(archive).Length == 0)
+                throw new IOException("The scheduled Business Backup ZIP is missing or empty.");
+
+            var client = new MegaApiClient();
+            await client.LoginAsync(account.ToToken()).WaitAsync(TimeSpan.FromSeconds(45), token);
+            var root = client.GetNodes().Single(n => n.Type == NodeType.Root);
+
+            const string finalName = "QuantumCore_Backup.zip";
+            const string uploadingName = "QuantumCore_Backup.uploading.zip";
+            var oldUploading = client.GetNodes(root).FirstOrDefault(n => n.Type == NodeType.File && n.Name == uploadingName);
+            if (oldUploading is not null)
+                await client.DeleteAsync(oldUploading, moveToTrash: false);
+            var oldFinal = client.GetNodes(root).FirstOrDefault(n => n.Type == NodeType.File && n.Name == finalName);
+
+            string uploadPath = Path.Combine(stagingParent, uploadingName);
+            if (File.Exists(uploadPath)) File.Delete(uploadPath);
+            File.Move(archive, uploadPath);
+            archive = uploadPath;
+
+            INode uploaded = await client.UploadFileAsync(uploadPath, root, null, token);
+            token.ThrowIfCancellationRequested();
+            INode promoted = await client.RenameAsync(uploaded, finalName);
+            if (oldFinal is not null)
+                await client.DeleteAsync(oldFinal, moveToTrash: false);
+
+            return result.BytesWritten;
         }
         finally
         {
-            if (temporary is not null && Directory.Exists(temporary))
-            {
-                try { Directory.Delete(temporary, true); } catch { }
-            }
+            try { if (File.Exists(archive)) File.Delete(archive); } catch { }
+            try { if (Directory.Exists(staging)) Directory.Delete(staging, true); } catch { }
         }
-    }
-
-    private static string MakeSafeName(string value)
-    {
-        foreach (char invalid in Path.GetInvalidFileNameChars()) value = value.Replace(invalid, '_');
-        return string.IsNullOrWhiteSpace(value) ? "Source" : value;
     }
 }
