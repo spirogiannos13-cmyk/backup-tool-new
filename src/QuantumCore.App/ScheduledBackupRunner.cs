@@ -110,6 +110,15 @@ public static class ScheduledBackupRunner
 
 public static class BusinessBackupExecutionService
 {
+    private static string FormatBytes(long bytes)
+    {
+        string[] units = ["B", "KB", "MB", "GB", "TB"];
+        double size = bytes;
+        int unit = 0;
+        while (size >= 1024 && unit < units.Length - 1) { size /= 1024; unit++; }
+        return $"{size:0.##} {units[unit]}";
+    }
+
     public static async Task<long> RunAsync(BackupSchedule schedule, DateTime startedAt, Action<int, string> reportProgress, CancellationToken token)
     {
         if (!schedule.BackupProfile.Equals("Business", StringComparison.OrdinalIgnoreCase))
