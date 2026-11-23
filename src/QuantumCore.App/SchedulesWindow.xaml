@@ -1,28 +1,31 @@
 <Window x:Class="QuantumCore.App.SchedulesWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Backup Automation — Quantum Core" Width="1040" Height="760"
-        MinWidth="900" MinHeight="680" WindowStartupLocation="CenterOwner"
+        Title="Backup Automation — Quantum Core" Width="1240" Height="860"
+        MinWidth="1080" MinHeight="740" WindowStartupLocation="CenterOwner"
         Background="#0B1627" Foreground="#EDF7FF" FontFamily="Segoe UI">
     <Window.Resources>
         <Style TargetType="Button">
             <Setter Property="Foreground" Value="#EAF8FF"/>
             <Setter Property="Background" Value="#183653"/>
             <Setter Property="BorderBrush" Value="#315777"/>
-            <Setter Property="Padding" Value="12,8"/>
+            <Setter Property="Padding" Value="13,9"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="Margin" Value="0,0,8,0"/>
         </Style>
         <Style TargetType="TextBox">
             <Setter Property="Background" Value="#101F33"/>
             <Setter Property="Foreground" Value="#EDF7FF"/>
             <Setter Property="BorderBrush" Value="#31506F"/>
-            <Setter Property="Padding" Value="9,7"/>
+            <Setter Property="Padding" Value="10,8"/>
+            <Setter Property="FontSize" Value="12"/>
         </Style>
         <Style TargetType="ComboBox">
             <Setter Property="Background" Value="#102B49"/>
             <Setter Property="Foreground" Value="#EDF7FF"/>
             <Setter Property="BorderBrush" Value="#2876A8"/>
-            <Setter Property="Padding" Value="8,6"/>
+            <Setter Property="Padding" Value="9,7"/>
         </Style>
         <Style TargetType="ComboBoxItem">
             <Setter Property="Background" Value="#102B49"/>
@@ -30,25 +33,26 @@
             <Setter Property="Padding" Value="8,6"/>
         </Style>
     </Window.Resources>
-    <Grid Margin="28">
+    <Grid Margin="34,30,34,26">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
-        <StackPanel Grid.Row="0" Margin="0,0,0,20">
+        <StackPanel Grid.Row="0" Margin="0,0,0,26">
             <TextBlock Text="QUANTUM CORE / AUTOMATION" Foreground="#55DDF7" FontSize="10"/>
-            <TextBlock Text="Scheduled Business Backup" FontSize="28" FontWeight="SemiBold" Margin="0,6,0,4"/>
+            <TextBlock Text="Scheduled Business Backup" FontSize="30" FontWeight="SemiBold" Margin="0,6,0,4"/>
             <TextBlock Text="Automate the complete business backup and safely overwrite the MEGA copy." Foreground="#8CA7C5"/>
         </StackPanel>
         <Grid Grid.Row="1">
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="1.05*"/>
-                <ColumnDefinition Width="1.2*"/>
+                <ColumnDefinition Width="0.94*"/>
+                <ColumnDefinition Width="1.06*"/>
             </Grid.ColumnDefinitions>
-            <Border Grid.Column="0" Background="#101F33" BorderBrush="#294563" BorderThickness="1" CornerRadius="12" Padding="18" Margin="0,0,12,0">
+            <Border Grid.Column="0" Background="#101F33" BorderBrush="#31516F" BorderThickness="1" CornerRadius="16" Padding="22" Margin="0,0,16,0">
                 <StackPanel>
-                    <TextBlock Text="NEW AUTOMATION" Foreground="#55DDF7" FontSize="11" FontWeight="SemiBold" Margin="0,0,0,16"/>
+                    <TextBlock Text="NEW AUTOMATION" Foreground="#55DDF7" FontSize="11" FontWeight="Bold" Margin="0,0,0,20"/>
+                    <TextBlock Text="Create a daily protection routine" Foreground="#DCEEFF" FontSize="17" FontWeight="SemiBold" Margin="0,0,0,16"/>
                     <TextBlock Text="BACKUP PROFILE" Foreground="#8CA7C5" FontSize="10"/>
                     <Border Background="#0B263D" BorderBrush="#1C9CC7" BorderThickness="1" CornerRadius="6" Padding="12" Margin="0,6,0,14">
                         <StackPanel>
@@ -71,7 +75,7 @@
                     </Border>
                     <TextBlock Text="FREQUENCY" Foreground="#8CA7C5" FontSize="10" Margin="0,14,0,5"/>
                     <TextBlock Text="Every day" Foreground="#EDF7FF" FontWeight="SemiBold"/>
-                    <TextBlock Text="START TIME (24-HOUR)" Foreground="#8CA7C5" FontSize="10" Margin="0,12,0,5"/>
+                    <TextBlock Text="START TIME (24-HOUR FORMAT)" Foreground="#8CA7C5" FontSize="10" Margin="0,12,0,5"/>
                     <TextBox x:Name="TimeBox" Text="03:00"/>
                     <Button Content="＋  SAVE DAILY SCHEDULE" Background="#087FC4" BorderBrush="#20C6E8" FontWeight="SemiBold"
                             HorizontalAlignment="Stretch" Margin="0,18,0,0" Click="SaveSchedule_Click"/>
@@ -79,32 +83,36 @@
                 </StackPanel>
             </Border>
             <Grid Grid.Column="1">
-                <Grid.RowDefinitions><RowDefinition Height="1*"/><RowDefinition Height="1.2*"/></Grid.RowDefinitions>
-                <Border Grid.Row="0" Background="#101F33" BorderBrush="#294563" BorderThickness="1" CornerRadius="12" Padding="16" Margin="0,0,0,10">
+                <Grid.RowDefinitions><RowDefinition Height="0.82*"/><RowDefinition Height="1.18*"/></Grid.RowDefinitions>
+                <Border Grid.Row="0" Background="#101F33" BorderBrush="#31516F" BorderThickness="1" CornerRadius="16" Padding="20" Margin="0,0,0,12">
                     <DockPanel>
                         <StackPanel DockPanel.Dock="Top" Margin="0,0,0,12">
-                            <TextBlock Text="ACTIVE AUTOMATIONS" Foreground="#55DDF7" FontSize="11" FontWeight="SemiBold"/>
+                            <TextBlock Text="ACTIVE AUTOMATIONS" Foreground="#55DDF7" FontSize="11" FontWeight="Bold"/>
                             <TextBlock Text="Registered with Windows Task Scheduler" Foreground="#8CA7C5" FontSize="11" Margin="0,5,0,0"/>
                         </StackPanel>
                         <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,10,0,0">
                             <Button Content="Refresh" Click="Refresh_Click"/>
                             <Button Content="Remove selected" Click="RemoveSchedule_Click" Margin="0"/>
                         </StackPanel>
-                        <ListBox x:Name="SchedulesList" Background="#0B1627" Foreground="#D9EDFF" BorderBrush="#294563" Padding="7"/>
+                        <ListBox x:Name="SchedulesList" Background="#0A1728" Foreground="#D9EDFF" BorderBrush="#294563" Padding="9" ScrollViewer.HorizontalScrollBarVisibility="Disabled" ScrollViewer.VerticalScrollBarVisibility="Auto">
+                            <ListBox.ItemTemplate><DataTemplate><TextBlock Text="{Binding}" TextWrapping="Wrap" Margin="4,3"/></DataTemplate></ListBox.ItemTemplate>
+                        </ListBox>
                     </DockPanel>
                 </Border>
-                <Border Grid.Row="1" Background="#101F33" BorderBrush="#294563" BorderThickness="1" CornerRadius="12" Padding="16" Margin="0,10,0,0">
+                <Border Grid.Row="1" Background="#101F33" BorderBrush="#294563" BorderThickness="1" CornerRadius="12" Padding="16" Margin="0,12,0,0">
                     <DockPanel>
                         <StackPanel DockPanel.Dock="Top" Margin="0,0,0,12">
                             <TextBlock Text="EXECUTION HISTORY" Foreground="#55DDF7" FontSize="11" FontWeight="SemiBold"/>
                             <TextBlock Text="Latest 20 scheduled runs, including errors and transferred size" Foreground="#8CA7C5" FontSize="11" Margin="0,5,0,0"/>
                         </StackPanel>
-                        <ListBox x:Name="HistoryList" Background="#0B1627" Foreground="#D9EDFF" BorderBrush="#294563" Padding="7"/>
+                        <ListBox x:Name="HistoryList" Background="#0A1728" Foreground="#D9EDFF" BorderBrush="#294563" Padding="9" ScrollViewer.HorizontalScrollBarVisibility="Disabled" ScrollViewer.VerticalScrollBarVisibility="Auto">
+                            <ListBox.ItemTemplate><DataTemplate><TextBlock Text="{Binding}" TextWrapping="Wrap" Margin="4,4"/></DataTemplate></ListBox.ItemTemplate>
+                        </ListBox>
                     </DockPanel>
                 </Border>
             </Grid>
         </Grid>
-        <TextBlock Grid.Row="2" Text="The PC must be awake, connected to the Internet, and you must be signed in to Windows at 03:00. Scheduled runs use your saved Windows/SQL and MEGA credentials."
+        <TextBlock Grid.Row="2" Text="Your PC must be awake, connected to the Internet, and signed in to Windows at the scheduled time. Scheduled runs use your saved Windows, SQL and MEGA credentials."
                    Foreground="#7894B2" FontSize="11" TextWrapping="Wrap" Margin="2,16,2,0"/>
     </Grid>
 </Window>
