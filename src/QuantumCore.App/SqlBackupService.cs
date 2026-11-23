@@ -5,7 +5,7 @@ namespace QuantumCore.App;
 public static class SqlBackupService
 {
     public static async Task<string> CreateBackupAsync(
-        SavedSqlConnection connection, string databaseName, CancellationToken cancellationToken)
+        SavedSqlConnection connection, string databaseName, string localDestinationDirectory, CancellationToken cancellationToken)
     {
         if (string.IsNullOrWhiteSpace(databaseName))
             throw new InvalidOperationException("Select a SQL database before starting the backup.");
@@ -21,23 +21,29 @@ public static class SqlBackupService
             serverDefaultDirectory = (await pathCommand.ExecuteScalarAsync(cancellationToken)) as string;
         }
 
-        string backupDirectory = connection.BackupDirectory.Trim();
         bool localServer = IsLocalServer(connection.Server);
-        if (string.IsNullOrWhiteSpace(backupDirectory))
+        string backupDirectory;
+        string fileName;
+
+        if (localServer)
         {
-            if (!localServer || string.IsNullOrWhiteSpace(serverDefaultDirectory))
-                throw new InvalidOperationException(
-                    "Set a SQL backup folder for this connection. For a remote SQL Server, use a UNC network share (\\\\server\\share\\folder) that the SQL Server service can write to and this PC can read from.");
-            backupDirectory = serverDefaultDirectory;
+            // For a local SQL Server, write the .bak directly into this backup run's
+            // staging directory. This is the folder selected by the user (or its
+            // temporary staging child), so there is no second copy from SQL's default
+            // Program Files\...\Backup directory.
+            backupDirectory = localDestinationDirectory;
+            Directory.CreateDirectory(backupDirectory);
+            fileName = "database.bak";
         }
-        else if (!localServer && !backupDirectory.StartsWith(@"\\", StringComparison.Ordinal))
+        else
         {
-            throw new InvalidOperationException(
-                "For a remote SQL Server, the backup folder must be a UNC network path (\\\\server\\share\\folder), not a drive letter or local path.");
+            backupDirectory = connection.BackupDirectory.Trim();
+            if (string.IsNullOrWhiteSpace(backupDirectory) || !backupDirectory.StartsWith(@"\\", StringComparison.Ordinal))
+                throw new InvalidOperationException(
+                    "For a remote SQL Server, set a UNC network share (\\\\server\\share\\folder) that the SQL Server service can write to and this PC can read from.");
+            fileName = $"QuantumCore_{MakeSafeFileName(databaseName)}_{DateTime.Now:yyyyMMdd_HHmmss}_{Guid.NewGuid():N}.bak";
         }
 
-        string safeDatabase = MakeSafeFileName(databaseName);
-        string fileName = $"QuantumCore_{safeDatabase}_{DateTime.Now:yyyyMMdd_HHmmss}_{Guid.NewGuid():N}.bak";
         string serverFilePath = Path.Combine(backupDirectory, fileName);
         string escapedPath = serverFilePath.Replace("'", "''");
         string escapedDatabase = databaseName.Replace("]", "]]");
