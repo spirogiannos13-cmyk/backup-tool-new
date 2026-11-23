@@ -7,7 +7,7 @@ namespace QuantumCore.App;
 public partial class MainWindow : Window
 {
     private int _backupCount;
-    private readonly DispatcherTimer _dashboardTimer = new() { Interval = TimeSpan.FromSeconds(3) };
+    private readonly DispatcherTimer _dashboardTimer = new() { Interval = TimeSpan.FromSeconds(1) };
     private readonly DispatcherTimer _systemTimer = new() { Interval = TimeSpan.FromSeconds(15) };
     private bool _refreshingSystem;
 
@@ -74,17 +74,35 @@ public partial class MainWindow : Window
             return;
         }
 
+        var activeStatus = ScheduledBackupStatusStore.Load();
+        bool currentBackupRunning = activeStatus?.IsRunning == true;
         var upcoming = schedules
-            .Select(schedule => new { Schedule = schedule, Next = GetNextRun(schedule, DateTime.Now) })
+            .Select(schedule =>
+            {
+                DateTime reference = DateTime.Now;
+                if (activeStatus is not null && activeStatus.ScheduleId == schedule.Id &&
+                    !activeStatus.IsRunning && activeStatus.Percent >= 100 &&
+                    activeStatus.UpdatedAt > DateTime.Now.AddDays(-8))
+                    reference = activeStatus.UpdatedAt;
+                return new { Schedule = schedule, Next = GetNextRun(schedule, reference) };
+            })
             .OrderBy(item => item.Next)
             .First();
 
         ScheduleNameText.Text = upcoming.Schedule.Name;
         ScheduleDetailText.Text = $"{upcoming.Schedule.Frequency} · {upcoming.Schedule.Time} · {upcoming.Schedule.DatabaseName} · {upcoming.Schedule.DestinationType}";
+        if (currentBackupRunning && activeStatus?.ScheduleId == upcoming.Schedule.Id)
+        {
+            ScheduleCountdownText.Text = "AFTER CURRENT BACKUP";
+            ScheduleDetailText.Text += " · Countdown starts when this backup finishes";
+            return;
+        }
+
         var remaining = upcoming.Next - DateTime.Now;
+        if (remaining < TimeSpan.Zero) remaining = TimeSpan.Zero;
         ScheduleCountdownText.Text = remaining.TotalDays >= 1
-            ? $"{(int)remaining.TotalDays}d {remaining.Hours}h {remaining.Minutes}m"
-            : $"{remaining.Hours:00}:{remaining.Minutes:00}:{remaining.Seconds:00}";
+            ? $"{(int)remaining.TotalDays}d {remaining.Hours:00}:{remaining.Minutes:00}:{remaining.Seconds:00}"
+            : $"{(int)remaining.TotalHours:00}:{remaining.Minutes:00}:{remaining.Seconds:00}";
     }
 
     private static DateTime GetNextRun(BackupSchedule schedule, DateTime now)
