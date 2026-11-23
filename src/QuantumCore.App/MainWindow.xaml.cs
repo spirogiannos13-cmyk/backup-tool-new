@@ -94,7 +94,7 @@ public partial class MainWindow : Window
         if (currentBackupRunning && activeStatus?.ScheduleId == upcoming.Schedule.Id)
         {
             ScheduleCountdownText.Text = "AFTER CURRENT BACKUP";
-            ScheduleDetailText.Text += " · Countdown starts when this backup finishes";
+            ScheduleDetailText.Text = $"{upcoming.Schedule.Frequency} · {upcoming.Schedule.Time} · {upcoming.Schedule.DatabaseName} · {upcoming.Schedule.DestinationType} · Countdown starts after completion";
             return;
         }
 
