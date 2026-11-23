@@ -1,6 +1,7 @@
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Threading;
+using System.Windows.Media.Animation;
 
 namespace QuantumCore.App;
 
@@ -216,7 +217,13 @@ public partial class MainWindow : Window
         SqlPage.Visibility = Visibility.Collapsed;
         CloudPage.Visibility = Visibility.Collapsed;
         SettingsPage.Visibility = Visibility.Collapsed;
+        page.Opacity = 0;
         page.Visibility = Visibility.Visible;
+        page.BeginAnimation(UIElement.OpacityProperty,
+            new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(240))
+            {
+                EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut }
+            });
         BreadcrumbText.Text = $"COMMAND CENTER / {section.ToUpperInvariant()}";
         PageTitleText.Text = title;
         PageSubtitleText.Text = subtitle;
