@@ -310,21 +310,70 @@
                 </ScrollViewer>
 
                 <!-- HISTORY -->
-                <ScrollViewer x:Name="HistoryPage" Visibility="Collapsed">
+                <ScrollViewer x:Name="HistoryPage" Visibility="Collapsed" VerticalScrollBarVisibility="Auto">
                     <StackPanel>
                         <Border Style="{StaticResource PanelCard}">
                             <StackPanel>
-                            <TextBlock Style="{StaticResource SectionTitle}" Text="EXECUTION HISTORY"/>
-                            <TextBlock Text="Review scheduled backup runs" FontSize="20" FontWeight="SemiBold" Margin="0,7,0,5"/>
-                            <TextBlock Text="The automation manager contains the latest scheduled executions, including timestamps, duration, transferred size and error details." Foreground="#A9C0DA" TextWrapping="Wrap"/>
-                            <Button Style="{StaticResource PrimaryButton}" Content="OPEN HISTORY &amp; LOGS  →" HorizontalAlignment="Left" Margin="0,20,0,0" Click="Schedules_Click"/>
+                                <TextBlock Style="{StaticResource SectionTitle}" Text="EXECUTION HISTORY"/>
+                                <TextBlock Text="Backup activity center" FontSize="22" FontWeight="SemiBold" Margin="0,7,0,5"/>
+                                <TextBlock Text="A persistent record of manual and scheduled operations, including outcomes, duration, size, destination and diagnostic details." Foreground="#A9C0DA" TextWrapping="Wrap"/>
+                                <Grid Margin="0,18,0,0">
+                                    <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                                    <ComboBox x:Name="HistoryFilterCombo" Grid.Column="0" Width="210" HorizontalAlignment="Left"
+                                              SelectedIndex="0" SelectionChanged="HistoryFilter_SelectionChanged">
+                                        <ComboBoxItem Content="All operations"/>
+                                        <ComboBoxItem Content="Successful"/>
+                                        <ComboBoxItem Content="Failed"/>
+                                        <ComboBoxItem Content="Cancelled"/>
+                                        <ComboBoxItem Content="Manual backups"/>
+                                        <ComboBoxItem Content="Scheduled backups"/>
+                                    </ComboBox>
+                                    <Button Grid.Column="1" Content="↻  REFRESH HISTORY" Click="RefreshHistory_Click" Margin="8,0,0,0"/>
+                                </Grid>
+                                <TextBlock x:Name="HistorySummaryText" Foreground="#55DDF7" FontSize="11" Margin="0,12,0,0"/>
                             </StackPanel>
+                        </Border>
+                        <Border Style="{StaticResource PanelCard}" Margin="0,14,0,0" Padding="8">
+                            <DataGrid x:Name="HistoryEntriesGrid" AutoGenerateColumns="False" IsReadOnly="True"
+                                      CanUserAddRows="False" CanUserDeleteRows="False" CanUserReorderColumns="True"
+                                      CanUserResizeRows="False" GridLinesVisibility="Horizontal"
+                                      HeadersVisibility="Column" SelectionMode="Single"
+                                      Background="#0D1A2B" Foreground="#EAF6FF"
+                                      BorderThickness="0" RowBackground="#101F33" AlternatingRowBackground="#13263D"
+                                      HorizontalGridLinesBrush="#233D59" VerticalGridLinesBrush="#233D59"
+                                      MinHeight="260" MaxHeight="620">
+                                <DataGrid.ColumnHeaderStyle>
+                                    <Style TargetType="DataGridColumnHeader">
+                                        <Setter Property="Background" Value="#173653"/>
+                                        <Setter Property="Foreground" Value="#55DDF7"/>
+                                        <Setter Property="FontWeight" Value="SemiBold"/>
+                                        <Setter Property="Padding" Value="9,10"/>
+                                        <Setter Property="BorderBrush" Value="#294563"/>
+                                    </Style>
+                                </DataGrid.ColumnHeaderStyle>
+                                <DataGrid.CellStyle>
+                                    <Style TargetType="DataGridCell">
+                                        <Setter Property="Padding" Value="8,7"/>
+                                        <Setter Property="BorderThickness" Value="0"/>
+                                        <Setter Property="Foreground" Value="#D8E8F7"/>
+                                    </Style>
+                                </DataGrid.CellStyle>
+                                <DataGrid.Columns>
+                                    <DataGridTextColumn Header="STATUS" Binding="{Binding StatusDisplay}" Width="95"/>
+                                    <DataGridTextColumn Header="OPERATION" Binding="{Binding OperationDisplay}" Width="155"/>
+                                    <DataGridTextColumn Header="STARTED" Binding="{Binding StartedDisplay}" Width="125"/>
+                                    <DataGridTextColumn Header="DURATION" Binding="{Binding DurationDisplay}" Width="90"/>
+                                    <DataGridTextColumn Header="SIZE" Binding="{Binding SizeDisplay}" Width="85"/>
+                                    <DataGridTextColumn Header="DESTINATION" Binding="{Binding Destination}" Width="170"/>
+                                    <DataGridTextColumn Header="DETAILS" Binding="{Binding Message}" Width="*"/>
+                                </DataGrid.Columns>
+                            </DataGrid>
                         </Border>
                         <Border Style="{StaticResource PanelCard}" Margin="0,14,0,0">
                             <StackPanel>
-                            <TextBlock Style="{StaticResource SectionTitle}" Text="LOG FILE LOCATION"/>
-                            <TextBlock Text="%LOCALAPPDATA%\QuantumCore\scheduled-backups.log" Foreground="#55DDF7" TextWrapping="Wrap" Margin="0,8,0,0"/>
-                            <TextBlock Text="History data: scheduled-backup-history.json" Foreground="#8CA7C5" Margin="0,5,0,0"/>
+                                <TextBlock Style="{StaticResource SectionTitle}" Text="DIAGNOSTIC LOG"/>
+                                <TextBlock Text="%LOCALAPPDATA%\QuantumCore\scheduled-backups.log" Foreground="#55DDF7" TextWrapping="Wrap" Margin="0,8,0,0"/>
+                                <TextBlock Text="Structured history: scheduled-backup-history.json · latest 200 operations" Foreground="#8CA7C5" Margin="0,5,0,0"/>
                             </StackPanel>
                         </Border>
                     </StackPanel>
