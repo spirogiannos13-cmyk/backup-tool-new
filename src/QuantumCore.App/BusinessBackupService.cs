@@ -126,62 +126,50 @@ public static class BusinessBackupService
                 "Windows PrintBRM was not found. Enable the Print and Document Services / Print Management feature, then try again.",
                 printBrmPath);
 
-        var start = new ProcessStartInfo(printBrmPath)
-        {
-            UseShellExecute = true,
-            Verb = "runas",
-            WorkingDirectory = Path.GetDirectoryName(targetPath)!
-        };
-        // Match the exact local command verified successfully by the user:
-        // PrintBrm.exe -b -f <absolute output path>
-        start.ArgumentList.Add("-b");
-        start.ArgumentList.Add("-f");
-        start.ArgumentList.Add(Path.GetFullPath(targetPath));
-
-        using var process = new Process { StartInfo = start };
+        // PrintBRM is run as the signed-in user, exactly like the PowerShell command
+        // verified on this PC. Export to the user's writable temp directory first:
+        // the MEGA staging folder may be under Program Files\...\MSSQL\Backup,
+        // where the interactive user may not have permission to create files.
+        string tempExport = Path.Combine(Path.GetTempPath(), "printers_" + Guid.NewGuid().ToString("N") + ".printerExport");
         try
         {
+            var start = new ProcessStartInfo(printBrmPath)
+            {
+                UseShellExecute = false,
+                CreateNoWindow = true,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                WorkingDirectory = Path.GetTempPath()
+            };
+            start.ArgumentList.Add("-b");
+            start.ArgumentList.Add("-f");
+            start.ArgumentList.Add(tempExport);
+
+            using var process = new Process { StartInfo = start };
             if (!process.Start())
                 throw new InvalidOperationException("Windows PrintBRM could not be started.");
+
+            Task<string> stdoutTask = process.StandardOutput.ReadToEndAsync(token);
+            Task<string> stderrTask = process.StandardError.ReadToEndAsync(token);
             await process.WaitForExitAsync(token);
-        }
-        catch (Win32Exception ex) when (ex.NativeErrorCode == 1223)
-        {
-            throw new OperationCanceledException(
-                "Printer export requires Windows administrator approval. The UAC permission request was declined.", ex, token);
-        }
-        catch
-        {
-            try { if (!process.HasExited) process.Kill(entireProcessTree: true); } catch { }
-            throw;
-        }
+            string processOutput = (await stdoutTask) + Environment.NewLine + (await stderrTask);
 
-        if (process.ExitCode != 0 || !File.Exists(targetPath) || new FileInfo(targetPath).Length == 0)
-        {
-            string spoolerState = "unknown";
-            try
+            if (process.ExitCode != 0 || !File.Exists(tempExport) || new FileInfo(tempExport).Length == 0)
             {
-                using var service = new Process
-                {
-                    StartInfo = new ProcessStartInfo("sc.exe", "query Spooler")
-                    {
-                        UseShellExecute = false,
-                        RedirectStandardOutput = true,
-                        RedirectStandardError = true,
-                        CreateNoWindow = true
-                    }
-                };
-                service.Start();
-                string serviceOutput = await service.StandardOutput.ReadToEndAsync(token);
-                await service.WaitForExitAsync(token);
-                spoolerState = serviceOutput.Contains("RUNNING", StringComparison.OrdinalIgnoreCase) ? "RUNNING" : serviceOutput.Trim();
+                throw new InvalidOperationException(
+                    $"Windows PrintBRM failed (exit code {process.ExitCode}) or did not create a valid export in the user's temp folder. " +
+                    $"Computer: {Environment.MachineName}. Output: {processOutput.Trim()}");
             }
-            catch (Exception ex) { spoolerState = ex.Message; }
 
-            throw new InvalidOperationException(
-                $"Windows PrintBRM did not create a valid printer export. Exit code: {process.ExitCode}. " +
-                $"Computer: {Environment.MachineName}. Print Spooler: {spoolerState}. " +
-                $"Expected file: {targetPath}. Verify the Print Spooler service and Windows Print Management, then check Event Viewer > Applications and Services Logs > Microsoft > Windows > PrintBRM > Admin.");
+            token.ThrowIfCancellationRequested();
+            Directory.CreateDirectory(Path.GetDirectoryName(targetPath)!);
+            File.Copy(tempExport, targetPath, overwrite: true);
+            if (!File.Exists(targetPath) || new FileInfo(targetPath).Length == 0)
+                throw new IOException($"PrintBRM export could not be copied to the backup staging folder: {targetPath}");
+        }
+        finally
+        {
+            try { if (File.Exists(tempExport)) File.Delete(tempExport); } catch { }
         }
 
         token.ThrowIfCancellationRequested();
