@@ -165,7 +165,8 @@ public partial class BackupWindow : Window
         try
         {
             string backupName = "QuantumCore_Backup";
-            staging = Path.Combine(Path.GetTempPath(), "QuantumCore_Staging_" + Guid.NewGuid().ToString("N"));
+            string stagingParent = useMega ? Path.GetTempPath() : DestinationBox.Text;
+            staging = Path.Combine(stagingParent, ".QuantumCore_Staging_" + Guid.NewGuid().ToString("N"));
             StatusText.Text = "Checking required backup sources…";
             BackupProgress.IsIndeterminate = true;
             var result = await BusinessBackupService.BuildAsync(
