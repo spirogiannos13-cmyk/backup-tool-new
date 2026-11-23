@@ -28,7 +28,7 @@ public static class ScheduledBackupRunner
 
             long bytes = await BusinessBackupExecutionService.RunAsync(schedule, (percent, stage) =>
                 ScheduledBackupStatusStore.Write(scheduleId, schedule.Name, true, percent, stage, started), CancellationToken.None);
-            ScheduledBackupStatusStore.Write(scheduleId, schedule.Name, true, 100, "Completed successfully", started);
+            ScheduledBackupStatusStore.Write(scheduleId, schedule.Name, false, 100, "Completed successfully", started);
             history.Success = true;
             history.BytesWritten = bytes;
             history.Destination = "MEGA:/QuantumCore_Backup.zip";
