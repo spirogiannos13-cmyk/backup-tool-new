@@ -114,13 +114,13 @@
                     </StackPanel>
                     <TextBlock Text="COMMAND CENTER" Foreground="#58738F" FontSize="10" FontWeight="Bold" Margin="12,0,0,10"/>
                     <Button x:Name="OverviewNav" Style="{StaticResource NavButton}" Background="#142B45" Foreground="#55E5FF" Content="◈    Overview" Click="Overview_Click"/>
-                    <Button Style="{StaticResource NavButton}" Content="▣    Backup Jobs" Click="Backups_Click"/>
-                    <Button Style="{StaticResource NavButton}" Content="◷    Automation" Click="Automation_Click"/>
-                    <Button Style="{StaticResource NavButton}" Content="▤    History &amp; Logs" Click="History_Click"/>
+                    <Button Style="{StaticResource NavButton}" x:Name="BackupsNav" Content="▣    Backup Jobs" Click="Backups_Click"/>
+                    <Button Style="{StaticResource NavButton}" x:Name="AutomationNav" Content="◷    Automation" Click="Automation_Click"/>
+                    <Button Style="{StaticResource NavButton}" x:Name="HistoryNav" Content="▤    History &amp; Logs" Click="History_Click"/>
                     <TextBlock Text="CONFIGURATION" Foreground="#58738F" FontSize="10" FontWeight="Bold" Margin="12,25,0,10"/>
-                    <Button Style="{StaticResource NavButton}" Content="▦    SQL Manager" Click="SqlConnections_Click"/>
-                    <Button Style="{StaticResource NavButton}" Content="◇    Cloud &amp; Storage" Click="Cloud_Click"/>
-                    <Button Style="{StaticResource NavButton}" Content="⚙    Settings" Click="Settings_Click"/>
+                    <Button Style="{StaticResource NavButton}" x:Name="SqlNav" Content="▦    SQL Manager" Click="SqlConnections_Click"/>
+                    <Button Style="{StaticResource NavButton}" x:Name="CloudNav" Content="◇    Cloud &amp; Storage" Click="Cloud_Click"/>
+                    <Button Style="{StaticResource NavButton}" x:Name="SettingsNav" Content="⚙    Settings" Click="Settings_Click"/>
                 </StackPanel>
             </DockPanel>
         </Border>
