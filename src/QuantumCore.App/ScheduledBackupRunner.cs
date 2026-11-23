@@ -73,7 +73,7 @@ public static class ScheduledBackupRunner
             ScheduledBackupStatusStore.Write(scheduleId, schedule.Name, true, 5, "Preparing backup", started);
             Log($"Starting full Business Backup '{schedule.Name}'.");
 
-            long bytes = await BusinessBackupExecutionService.RunAsync(schedule, (percent, stage) =>
+            long bytes = await BusinessBackupExecutionService.RunAsync(schedule, started, (percent, stage) =>
                 ScheduledBackupStatusStore.Write(scheduleId, schedule.Name, true, percent, stage, started), CancellationToken.None);
             ScheduledBackupStatusStore.Write(scheduleId, schedule.Name, false, 100, "Completed successfully", started);
             history.Success = true;
@@ -110,7 +110,7 @@ public static class ScheduledBackupRunner
 
 public static class BusinessBackupExecutionService
 {
-    public static async Task<long> RunAsync(BackupSchedule schedule, Action<int, string> reportProgress, CancellationToken token)
+    public static async Task<long> RunAsync(BackupSchedule schedule, DateTime startedAt, Action<int, string> reportProgress, CancellationToken token)
     {
         if (!schedule.BackupProfile.Equals("Business", StringComparison.OrdinalIgnoreCase))
             throw new InvalidOperationException("This scheduled task is not configured for the full Business Backup profile.");
@@ -162,6 +162,8 @@ public static class BusinessBackupExecutionService
             const int idleTimeoutSeconds = 90;
             const int totalAttemptTimeoutMinutes = 90;
             INode? uploaded = null;
+            ScheduledBackupStatusStore.Write(schedule.Id, schedule.Name, true, 88,
+                "Connecting upload stream to MEGA", startedAt, 0, uploadedArchiveBytes, 0, 1, DateTime.Now);
             for (int attempt = 1; attempt <= maxUploadAttempts; attempt++)
             {
                 using var totalTimeout = new CancellationTokenSource(TimeSpan.FromMinutes(totalAttemptTimeoutMinutes));
@@ -174,7 +176,7 @@ public static class BusinessBackupExecutionService
                         ScheduledBackupStatusStore.Write(
                             schedule.Id, schedule.Name, true, overallPercent,
                             $"Uploading to MEGA · attempt {retry}/{maxUploadAttempts}",
-                            DateTime.Now, uploadedBytes, totalBytes, speed, retry, lastProgressAt);
+                            startedAt, uploadedBytes, totalBytes, speed, retry, lastProgressAt);
                         reportProgress(overallPercent,
                             $"Uploading to MEGA · {FormatBytes(uploadedBytes)} / {FormatBytes(totalBytes)}");
                     },
