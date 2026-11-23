@@ -100,12 +100,9 @@ public static class SqlBackupService
             try { if (File.Exists(destinationPath)) File.Delete(destinationPath); } catch { }
             throw;
         }
-        finally
-        {
-            // The SQL Server creates a temporary .bak; remove it after the copy attempt
-            // so the server's backup directory does not accumulate old Quantum Core files.
-            try { if (File.Exists(serverFilePath)) File.Delete(serverFilePath); } catch { }
-        }
+        // Keep the SQL Server .bak when copying or verification fails. It is the
+        // evidence needed to diagnose a sharing violation and may be the only valid copy.
+        // Delete it only after the verified copy has been promoted successfully.
     }
 
     private static async Task<FileStream> OpenReadWithRetryAsync(string path, CancellationToken token)
