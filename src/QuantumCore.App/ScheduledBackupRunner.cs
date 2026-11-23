@@ -77,6 +77,7 @@ public static class ScheduledBackupRunner
                 ScheduledBackupStatusStore.Write(scheduleId, schedule.Name, true, percent, stage, started), CancellationToken.None);
             ScheduledBackupStatusStore.Write(scheduleId, schedule.Name, false, 100, "Completed successfully", started);
             history.Success = true;
+            history.Status = "SUCCESS";
             history.BytesWritten = bytes;
             history.Destination = "MEGA:/QuantumCore_Backup.zip";
             history.Message = $"Completed successfully. Compressed ZIP uploaded to MEGA: {FormatBytes(bytes)}.";
@@ -86,7 +87,8 @@ public static class ScheduledBackupRunner
         {
             ScheduledBackupStatusStore.Write(scheduleId, schedule?.Name ?? "Scheduled backup", false, 0, "Failed: " + ex.Message, started);
             history.Success = false;
-            history.Message = ex.ToString();
+            history.Status = ex is OperationCanceledException ? "CANCELLED" : "FAILED";
+            history.Message = (history.Status == "CANCELLED" ? "CANCELLED: " : "FAILED: ") + ex;
             Log("FAILED: " + ex);
             throw;
         }
