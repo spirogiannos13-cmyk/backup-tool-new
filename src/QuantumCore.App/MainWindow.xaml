@@ -240,10 +240,12 @@
                 <ScrollViewer x:Name="AutomationPage" Visibility="Collapsed">
                     <StackPanel>
                         <Border Style="{StaticResource PanelCard}">
+                            <StackPanel>
                             <TextBlock Style="{StaticResource SectionTitle}" Text="SCHEDULED OPERATIONS"/>
                             <TextBlock Text="Automate your protection routine" FontSize="20" FontWeight="SemiBold" Margin="0,7,0,5"/>
                             <TextBlock Text="Configure the daily full Business Backup, choose its SQL database and destination, and review registered tasks." Foreground="#A9C0DA" TextWrapping="Wrap"/>
                             <Button Style="{StaticResource PrimaryButton}" Content="OPEN AUTOMATION MANAGER  →" HorizontalAlignment="Left" Margin="0,20,0,0" Click="Schedules_Click"/>
+                            </StackPanel>
                         </Border>
                         <Border Style="{StaticResource PanelCard}" Margin="0,14,0,0">
                             <TextBlock Style="{StaticResource SectionTitle}" Text="REQUIREMENTS"/>
@@ -256,10 +258,12 @@
                 <ScrollViewer x:Name="HistoryPage" Visibility="Collapsed">
                     <StackPanel>
                         <Border Style="{StaticResource PanelCard}">
+                            <StackPanel>
                             <TextBlock Style="{StaticResource SectionTitle}" Text="EXECUTION HISTORY"/>
                             <TextBlock Text="Review scheduled backup runs" FontSize="20" FontWeight="SemiBold" Margin="0,7,0,5"/>
                             <TextBlock Text="The automation manager contains the latest scheduled executions, including timestamps, duration, transferred size and error details." Foreground="#A9C0DA" TextWrapping="Wrap"/>
                             <Button Style="{StaticResource PrimaryButton}" Content="OPEN HISTORY &amp; LOGS  →" HorizontalAlignment="Left" Margin="0,20,0,0" Click="Schedules_Click"/>
+                            </StackPanel>
                         </Border>
                         <Border Style="{StaticResource PanelCard}" Margin="0,14,0,0">
                             <TextBlock Style="{StaticResource SectionTitle}" Text="LOG FILE LOCATION"/>
@@ -273,10 +277,12 @@
                 <ScrollViewer x:Name="SqlPage" Visibility="Collapsed">
                     <StackPanel>
                         <Border Style="{StaticResource PanelCard}">
+                            <StackPanel>
                             <TextBlock Style="{StaticResource SectionTitle}" Text="DATA SOURCES"/>
                             <TextBlock Text="SQL Connection Manager" FontSize="20" FontWeight="SemiBold" Margin="0,7,0,5"/>
                             <TextBlock Text="Save SQL Server connections, test authentication and select databases for backup operations." Foreground="#A9C0DA" TextWrapping="Wrap"/>
                             <Button Style="{StaticResource PrimaryButton}" Content="MANAGE SQL CONNECTIONS  →" HorizontalAlignment="Left" Margin="0,20,0,0" Click="OpenSqlManager_Click"/>
+                            </StackPanel>
                         </Border>
                     </StackPanel>
                 </ScrollViewer>
@@ -285,11 +291,13 @@
                 <ScrollViewer x:Name="CloudPage" Visibility="Collapsed">
                     <StackPanel>
                         <Border Style="{StaticResource PanelCard}">
+                            <StackPanel>
                             <TextBlock Style="{StaticResource SectionTitle}" Text="CLOUD DESTINATIONS"/>
                             <TextBlock Text="MEGA Cloud Storage" FontSize="20" FontWeight="SemiBold" Margin="0,7,0,5"/>
                             <TextBlock Text="MEGA is used as the cloud destination for the scheduled full Business Backup. The saved account session is protected for the current Windows user." Foreground="#A9C0DA" TextWrapping="Wrap"/>
                             <TextBlock Text="Account sign-in and session replacement are handled from the backup workflow. A dedicated cloud account panel can be added here as the next UI step." Foreground="#7894B2" TextWrapping="Wrap" Margin="0,12,0,0"/>
                             <Button Style="{StaticResource PrimaryButton}" Content="OPEN BACKUP WORKFLOW  →" HorizontalAlignment="Left" Margin="0,20,0,0" Click="NewBackup_Click"/>
+                            </StackPanel>
                         </Border>
                     </StackPanel>
                 </ScrollViewer>
@@ -298,10 +306,12 @@
                 <ScrollViewer x:Name="SettingsPage" Visibility="Collapsed">
                     <StackPanel>
                         <Border Style="{StaticResource PanelCard}">
+                            <StackPanel>
                             <TextBlock Style="{StaticResource SectionTitle}" Text="SYSTEM CONFIGURATION"/>
                             <TextBlock Text="Quantum Core Settings" FontSize="20" FontWeight="SemiBold" Margin="0,7,0,5"/>
                             <TextBlock Text="The settings area is reserved for application preferences, notifications, appearance and retention policies. Existing backup and SQL settings remain in their dedicated managers." Foreground="#A9C0DA" TextWrapping="Wrap"/>
                             <TextBlock Text="More controls will appear here as they become available." Foreground="#55DDF7" Margin="0,14,0,0"/>
+                            </StackPanel>
                         </Border>
                     </StackPanel>
                 </ScrollViewer>
