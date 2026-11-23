@@ -128,6 +128,38 @@ public partial class MainWindow : Window
             idlePulse.Begin(this, true);
     }
 
+    private void RefreshHistory_Click(object sender, RoutedEventArgs e) => LoadHistoryEntries();
+
+    private void HistoryFilter_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (HistoryEntriesGrid is not null) LoadHistoryEntries();
+    }
+
+    private void LoadHistoryEntries()
+    {
+        var entries = ScheduledBackupHistoryStore.Load()
+            .OrderByDescending(entry => entry.FinishedAt == default ? entry.StartedAt : entry.FinishedAt)
+            .ToList();
+
+        int filter = HistoryFilterCombo?.SelectedIndex ?? 0;
+        IEnumerable<ScheduledBackupHistoryEntry> filtered = entries;
+        filtered = filter switch
+        {
+            1 => filtered.Where(entry => entry.Success),
+            2 => filtered.Where(entry => !entry.Success && !entry.StatusDisplay.Equals("CANCELLED", StringComparison.OrdinalIgnoreCase)
+                && !entry.Message.StartsWith("CANCELLED:", StringComparison.OrdinalIgnoreCase)),
+            3 => filtered.Where(entry => entry.StatusDisplay.Equals("CANCELLED", StringComparison.OrdinalIgnoreCase)
+                || entry.Message.StartsWith("CANCELLED:", StringComparison.OrdinalIgnoreCase)),
+            4 => filtered.Where(entry => entry.ScheduleId.Equals("manual", StringComparison.OrdinalIgnoreCase)),
+            5 => filtered.Where(entry => !entry.ScheduleId.Equals("manual", StringComparison.OrdinalIgnoreCase)),
+            _ => filtered
+        };
+
+        var rows = filtered.ToList();
+        HistoryEntriesGrid.ItemsSource = rows;
+        HistorySummaryText.Text = $"SHOWING {rows.Count} OF {entries.Count} RECORDED OPERATIONS · HISTORY RETENTION: LAST 200";
+    }
+
     private void RefreshBackupSummary()
     {
         var entries = ScheduledBackupHistoryStore.Load()
@@ -303,8 +335,11 @@ public partial class MainWindow : Window
         ShowPage("Backup Jobs", "Backup Workspace", "Create and manage your backup operations.", BackupsPage, BackupsNav);
     private void Automation_Click(object sender, RoutedEventArgs e) =>
         ShowPage("Automation", "Scheduled Operations", "Plan and monitor your automated protection routine.", AutomationPage, AutomationNav);
-    private void History_Click(object sender, RoutedEventArgs e) =>
-        ShowPage("History & Logs", "Execution History", "Review scheduled backup runs and diagnostic logs.", HistoryPage, HistoryNav);
+    private void History_Click(object sender, RoutedEventArgs e)
+    {
+        ShowPage("History & Logs", "Execution History", "Review manual and scheduled backup operations.", HistoryPage, HistoryNav);
+        LoadHistoryEntries();
+    }
     private void Cloud_Click(object sender, RoutedEventArgs e) =>
         ShowPage("Cloud & Storage", "Cloud Destinations", "Manage the cloud destination used by your backup workflows.", CloudPage, CloudNav);
     private void Settings_Click(object sender, RoutedEventArgs e) =>

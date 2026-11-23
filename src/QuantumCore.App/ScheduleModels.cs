@@ -104,9 +104,41 @@ public sealed class ScheduledBackupHistoryEntry
     public DateTime StartedAt { get; set; }
     public DateTime FinishedAt { get; set; }
     public bool Success { get; set; }
+    public string Status { get; set; } = "";
     public string Destination { get; set; } = "MEGA:/QuantumCore_Backup.zip";
     public long BytesWritten { get; set; }
     public string Message { get; set; } = "";
+
+    public string StatusDisplay => !string.IsNullOrWhiteSpace(Status)
+        ? Status
+        : (Message.StartsWith("CANCELLED:", StringComparison.OrdinalIgnoreCase) ? "CANCELLED"
+            : Success ? "SUCCESS" : "FAILED");
+    public string OperationDisplay => ScheduleId.Equals("manual", StringComparison.OrdinalIgnoreCase)
+        ? "Manual Business Backup" : (string.IsNullOrWhiteSpace(ScheduleName) ? "Scheduled Backup" : ScheduleName);
+    public string StartedDisplay => StartedAt == default ? "—" : StartedAt.ToString("dd/MM/yy HH:mm:ss");
+    public string DurationDisplay
+    {
+        get
+        {
+            if (StartedAt == default || FinishedAt == default) return "—";
+            var duration = FinishedAt - StartedAt;
+            return duration.TotalHours >= 1 ? $"{(int)duration.TotalHours}h {duration.Minutes}m"
+                : duration.TotalMinutes >= 1 ? $"{(int)duration.TotalMinutes}m {duration.Seconds}s"
+                : $"{Math.Max(0, duration.TotalSeconds):0}s";
+        }
+    }
+    public string SizeDisplay
+    {
+        get
+        {
+            if (BytesWritten <= 0) return "—";
+            string[] units = ["B", "KB", "MB", "GB", "TB"];
+            double size = BytesWritten;
+            int unit = 0;
+            while (size >= 1024 && unit < units.Length - 1) { size /= 1024; unit++; }
+            return $"{size:0.##} {units[unit]}";
+        }
+    }
 }
 
 public static class ScheduledBackupHistoryStore
