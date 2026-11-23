@@ -94,7 +94,7 @@ public static class SqlBackupService
     {
         string value = server.Trim();
         string host = value.Split('\\', ',')[0].Trim();
-        return value.StartsWith(@".\\", StringComparison.Ordinal)
+        return value.StartsWith(@".\", StringComparison.Ordinal)
             || value.StartsWith(@"(localdb)", StringComparison.OrdinalIgnoreCase)
             || host is "." or "(local)" or "localhost"
             || host.Equals(Environment.MachineName, StringComparison.OrdinalIgnoreCase);
