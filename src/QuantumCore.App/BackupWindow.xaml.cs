@@ -273,7 +273,10 @@ public partial class BackupWindow : Window
                 movedPrevious = true;
             }
             Directory.Move(stagingDirectory, finalDirectory);
-            if (movedPrevious) Directory.Delete(previousDirectory, true);
+            if (movedPrevious)
+            {
+                try { Directory.Delete(previousDirectory, true); } catch { /* The new verified backup is already promoted. */ }
+            }
         }
         catch
         {
