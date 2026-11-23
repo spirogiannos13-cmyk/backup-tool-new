@@ -394,15 +394,42 @@
                 </ScrollViewer>
 
                 <!-- CLOUD -->
-                <ScrollViewer x:Name="CloudPage" Visibility="Collapsed">
+                <ScrollViewer x:Name="CloudPage" Visibility="Collapsed" VerticalScrollBarVisibility="Auto">
                     <StackPanel>
                         <Border Style="{StaticResource PanelCard}">
                             <StackPanel>
-                            <TextBlock Style="{StaticResource SectionTitle}" Text="CLOUD DESTINATIONS"/>
-                            <TextBlock Text="MEGA Cloud Storage" FontSize="20" FontWeight="SemiBold" Margin="0,7,0,5"/>
-                            <TextBlock Text="MEGA is used as the cloud destination for the scheduled full Business Backup. The saved account session is protected for the current Windows user." Foreground="#A9C0DA" TextWrapping="Wrap"/>
-                            <TextBlock Text="Account sign-in and session replacement are handled from the backup workflow. A dedicated cloud account panel can be added here as the next UI step." Foreground="#7894B2" TextWrapping="Wrap" Margin="0,12,0,0"/>
-                            <Button Style="{StaticResource PrimaryButton}" Content="OPEN BACKUP WORKFLOW  →" HorizontalAlignment="Left" Margin="0,20,0,0" Click="NewBackup_Click"/>
+                                <TextBlock Style="{StaticResource SectionTitle}" Text="CLOUD ACCOUNT / CONNECTION"/>
+                                <TextBlock Text="MEGA Account Management" FontSize="22" FontWeight="SemiBold" Margin="0,7,0,5"/>
+                                <TextBlock Text="Connect, replace or disconnect the MEGA account used by manual and scheduled backups." Foreground="#A9C0DA" TextWrapping="Wrap"/>
+                                <Border Background="#0B192A" BorderBrush="#294563" BorderThickness="1" CornerRadius="10" Padding="16" Margin="0,18,0,0">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                                        <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+                                        <Grid Grid.RowSpan="2" Width="46" Height="46" VerticalAlignment="Center">
+                                            <Ellipse Fill="#123B55" Stroke="#20C6E8" StrokeThickness="1.2"/>
+                                            <TextBlock Text="◇" FontSize="25" Foreground="#55E5FF" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                        </Grid>
+                                        <StackPanel Grid.Column="1" Margin="14,0,0,0">
+                                            <TextBlock Text="MEGA CONNECTION STATUS" FontSize="9" Foreground="#7894B2" FontWeight="SemiBold"/>
+                                            <TextBlock x:Name="MegaConnectionStateText" Text="Checking connection…" FontSize="17" FontWeight="SemiBold" Margin="0,4,0,2"/>
+                                            <TextBlock x:Name="MegaConnectionEmailText" Text="No account connected" FontSize="11" Foreground="#A9C0DA" TextWrapping="Wrap"/>
+                                        </StackPanel>
+                                        <TextBlock x:Name="MegaConnectionHintText" Grid.Row="1" Grid.Column="1" Text="The encrypted session is stored for the current Windows user." Foreground="#7894B2" FontSize="10" TextWrapping="Wrap" Margin="14,9,0,0"/>
+                                    </Grid>
+                                </Border>
+                                <TextBlock x:Name="MegaManagementMessageText" Foreground="#8CA7C5" FontSize="11" TextWrapping="Wrap" Margin="0,12,0,0"/>
+                                <WrapPanel Margin="0,18,0,0">
+                                    <Button Style="{StaticResource PrimaryButton}" Content="＋  CONNECT / CHANGE ACCOUNT" Click="ConnectMegaAccount_Click" Margin="0,0,10,8"/>
+                                    <Button Content="DISCONNECT MEGA" Click="DisconnectMegaAccount_Click" Margin="0,0,10,8" Padding="18,12"/>
+                                    <Button Content="↻  REFRESH STATUS" Click="RefreshMegaAccount_Click" Margin="0,0,0,8" Padding="18,12"/>
+                                </WrapPanel>
+                            </StackPanel>
+                        </Border>
+                        <Border Style="{StaticResource PanelCard}" Margin="0,14,0,0">
+                            <StackPanel>
+                                <TextBlock Style="{StaticResource SectionTitle}" Text="SECURITY &amp; SCHEDULED BACKUPS"/>
+                                <TextBlock Text="Your MEGA password is not stored. When Remember Account is enabled, Quantum Core stores only the encrypted session token using Windows DPAPI for the current Windows user." Foreground="#A9C0DA" TextWrapping="Wrap" Margin="0,8,0,0"/>
+                                <TextBlock Text="Scheduled uploads require a saved MEGA session. If you disconnect or choose not to remember the account, sign in again and save the session before the next scheduled run." Foreground="#55DDF7" TextWrapping="Wrap" Margin="0,10,0,0"/>
                             </StackPanel>
                         </Border>
                     </StackPanel>
