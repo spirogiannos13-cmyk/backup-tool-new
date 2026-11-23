@@ -57,7 +57,7 @@ public partial class SqlConnectionManagerWindow : Window
         AuthenticationCombo.SelectedIndex = connection.UseWindowsAuthentication ? 0 : 1;
         UsernameBox.Text = connection.Username;
         PasswordBox.Password = "";
-        DatabasesList.Items.Clear();
+        DatabasesList.ItemsSource = null;
         DatabaseStatusText.Text = "Test the connection to load databases.";
         StatusText.Text = "Saved connection selected. Re-enter its password to edit SQL authentication details.";
     }
@@ -74,7 +74,7 @@ public partial class SqlConnectionManagerWindow : Window
         AuthenticationCombo.SelectedIndex = 0;
         UsernameBox.Text = "";
         PasswordBox.Password = "";
-        DatabasesList.Items.Clear();
+        DatabasesList.ItemsSource = null;
         DatabaseStatusText.Text = "Connect to a SQL Server to list its databases.";
         StatusText.Text = "Enter the details for a new SQL connection.";
     }
