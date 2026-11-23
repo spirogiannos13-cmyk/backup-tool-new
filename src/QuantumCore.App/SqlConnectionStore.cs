@@ -16,6 +16,9 @@ public sealed class SavedSqlConnection
     public string Username { get; set; } = "";
     public string? ProtectedPassword { get; set; }
 
+    // Readable fallback for custom WPF ComboBox templates.
+    public override string ToString() => string.IsNullOrWhiteSpace(Name) ? Server : Name;
+
     public string GetConnectionString(string? database = null)
     {
         var builder = new SqlConnectionStringBuilder
@@ -105,9 +108,10 @@ public static class SqlServerDiscovery
             foreach (var instanceName in instances.GetValueNames())
             {
                 if (string.IsNullOrWhiteSpace(instanceName)) continue;
+                string machineName = Environment.MachineName;
                 servers.Add(instanceName.Equals("MSSQLSERVER", StringComparison.OrdinalIgnoreCase)
-                    ? "."
-                    : @".\" + instanceName);
+                    ? machineName
+                    : machineName + @"\" + instanceName);
             }
         }
         catch (UnauthorizedAccessException) { }
