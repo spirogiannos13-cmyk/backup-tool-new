@@ -19,6 +19,24 @@ public partial class SqlConnectionManagerWindow : Window
         if (_connections.Count > 0) SavedConnectionsCombo.SelectedIndex = 0;
     }
 
+    private void BrowseBackupDirectory_Click(object sender, RoutedEventArgs e)
+    {
+        var dialog = new Microsoft.Win32.OpenFolderDialog
+        {
+            Title = "Select SQL Server backup folder",
+            Multiselect = false,
+            InitialDirectory = Directory.Exists(BackupDirectoryBox.Text)
+                ? BackupDirectoryBox.Text
+                : Environment.GetFolderPath(Environment.SpecialFolder.MyComputer)
+        };
+
+        if (dialog.ShowDialog(this) == true)
+        {
+            BackupDirectoryBox.Text = dialog.FolderName;
+            StatusText.Text = "SQL backup folder selected. Make sure the SQL Server service account can write to it.";
+        }
+    }
+
     private void Discover_Click(object sender, RoutedEventArgs e) => DiscoverLocalServers();
 
     private void DiscoverLocalServers()
