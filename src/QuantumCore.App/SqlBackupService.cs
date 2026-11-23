@@ -75,14 +75,16 @@ public static class SqlBackupService
 
         try
         {
-            await using (var input = new FileStream(serverFilePath, FileMode.Open, FileAccess.Read, FileShare.Read, 1024 * 1024, true))
+            // SQL Server or an antivirus/indexing process can briefly hold the completed .bak.
+            // Retry sharing/lock violations rather than failing the entire backup immediately.
+            await using (var input = await OpenReadWithRetryAsync(serverFilePath, token))
             await using (var output = new FileStream(stagingPath, FileMode.Create, FileAccess.Write, FileShare.None, 1024 * 1024, true))
             {
                 await input.CopyToAsync(output, 1024 * 1024, token);
                 await output.FlushAsync(token);
             }
 
-            await using var sourceHashStream = new FileStream(serverFilePath, FileMode.Open, FileAccess.Read, FileShare.Read, 1024 * 1024, true);
+            await using var sourceHashStream = await OpenReadWithRetryAsync(serverFilePath, token);
             await using var destinationHashStream = new FileStream(stagingPath, FileMode.Open, FileAccess.Read, FileShare.Read, 1024 * 1024, true);
             byte[] sourceHash = await System.Security.Cryptography.SHA256.HashDataAsync(sourceHashStream, token);
             byte[] destinationHash = await System.Security.Cryptography.SHA256.HashDataAsync(destinationHashStream, token);
@@ -104,6 +106,38 @@ public static class SqlBackupService
             // so the server's backup directory does not accumulate old Quantum Core files.
             try { if (File.Exists(serverFilePath)) File.Delete(serverFilePath); } catch { }
         }
+    }
+
+    private static async Task<FileStream> OpenReadWithRetryAsync(string path, CancellationToken token)
+    {
+        const int maxAttempts = 30;
+        const int retryDelayMilliseconds = 1000;
+
+        for (int attempt = 1; ; attempt++)
+        {
+            token.ThrowIfCancellationRequested();
+            try
+            {
+                return new FileStream(path, FileMode.Open, FileAccess.Read,
+                    FileShare.ReadWrite | FileShare.Delete, 1024 * 1024, FileOptions.Asynchronous);
+            }
+            catch (IOException ex) when (IsSharingViolation(ex) && attempt < maxAttempts)
+            {
+                await Task.Delay(retryDelayMilliseconds, token);
+            }
+            catch (IOException ex) when (IsSharingViolation(ex))
+            {
+                throw new IOException(
+                    $"The SQL backup file is still locked after {maxAttempts} attempts (about {maxAttempts} seconds): {path}. Close any program using this .bak file and check antivirus/backup scanners.",
+                    ex);
+            }
+        }
+    }
+
+    private static bool IsSharingViolation(IOException exception)
+    {
+        int win32Error = exception.HResult & 0xFFFF;
+        return win32Error is 32 or 33; // ERROR_SHARING_VIOLATION / ERROR_LOCK_VIOLATION
     }
 
     private static bool IsLocalServer(string server)
