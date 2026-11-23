@@ -21,6 +21,7 @@ public partial class BackupWindow : Window
         _sqlConnections = SqlConnectionStore.Load();
         SqlConnectionCombo.ItemsSource = _sqlConnections;
         if (_sqlConnections.Count > 0) SqlConnectionCombo.SelectedIndex = 0;
+        RefreshMegaAccountStatus();
     }
 
     private void SqlConnectionCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -84,6 +85,44 @@ public partial class BackupWindow : Window
             StatusText.Text = DestinationModeCombo.SelectedIndex == 1
                 ? "MEGA cloud selected. You will sign in securely when you start."
                 : "Choose a local folder. Source files are copied; originals are never modified.";
+        if (MegaAccountPanel is not null) RefreshMegaAccountStatus();
+    }
+
+    private void RefreshMegaAccountStatus()
+    {
+        bool connected = MegaAccountStore.TryLoad(out var account) && account is not null;
+        MegaAccountPanel.Visibility = DestinationModeCombo.SelectedIndex == 1 ? Visibility.Visible : Visibility.Collapsed;
+        MegaAccountText.Text = connected
+            ? $"Remembered MEGA account: {account!.Email}"
+            : "No saved MEGA account. Sign in during the next MEGA backup.";
+        MegaAccountText.Foreground = connected
+            ? System.Windows.Media.Brushes.LightGreen
+            : System.Windows.Media.Brushes.Orange;
+    }
+
+    private void DisconnectMega_Click(object sender, RoutedEventArgs e)
+    {
+        if (!MegaAccountStore.TryLoad(out var account) || account is null)
+        {
+            RefreshMegaAccountStatus();
+            return;
+        }
+
+        var answer = MessageBox.Show(this,
+            $"Remove the saved MEGA session for {account.Email}?\n\nThe next MEGA backup will ask you to sign in again. Scheduled backups will also need a newly saved MEGA session.",
+            "Disconnect MEGA", MessageBoxButton.YesNo, MessageBoxImage.Warning);
+        if (answer != MessageBoxResult.Yes) return;
+
+        try
+        {
+            MegaAccountStore.Remove();
+            RefreshMegaAccountStatus();
+            StatusText.Text = "Saved MEGA session removed. Sign in again on the next MEGA backup.";
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show(this, ex.Message, "Could not disconnect MEGA", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
     }
 
     private async void StartBusinessBackup_Click(object sender, RoutedEventArgs e)
