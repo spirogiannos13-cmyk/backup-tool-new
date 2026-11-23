@@ -40,17 +40,17 @@ public static class BusinessBackupService
 
         token.ThrowIfCancellationRequested();
         string printerTarget = Path.Combine(stagingDirectory, PrinterExportFileName);
-        await ExportWindowsPrintersAsync(printerTarget, token);
+        await RunStageAsync("Windows printer export (printers.printerExport)", () => ExportWindowsPrintersAsync(printerTarget, token));
         created.Add(printerTarget);
         bytes += new FileInfo(printerTarget).Length;
 
         string taxTarget = Path.Combine(stagingDirectory, "appsettings.production.json");
-        await CopyFileVerifiedAsync(TaxProviderConfig, taxTarget, token);
+        await RunStageAsync($"Copy configuration file '{TaxProviderConfig}'", () => CopyFileVerifiedAsync(TaxProviderConfig, taxTarget, token));
         created.Add(taxTarget);
         bytes += new FileInfo(taxTarget).Length;
 
         string webTarget = Path.Combine(stagingDirectory, "web.config");
-        await CopyFileVerifiedAsync(WebServiceConfig, webTarget, token);
+        await RunStageAsync($"Copy web.config '{WebServiceConfig}'", () => CopyFileVerifiedAsync(WebServiceConfig, webTarget, token));
         created.Add(webTarget);
         bytes += new FileInfo(webTarget).Length;
 
@@ -58,26 +58,58 @@ public static class BusinessBackupService
         {
             token.ThrowIfCancellationRequested();
             string target = Path.Combine(stagingDirectory, fileName);
-            await ExportRegistryKeyAsync(registryKey, target, token);
+            await RunStageAsync($"Export Registry key '{registryKey}'", () => ExportRegistryKeyAsync(registryKey, target, token));
             created.Add(target);
             bytes += new FileInfo(target).Length;
         }
 
         string formArchive = Path.Combine(stagingDirectory, "form_path.zip");
-        await Task.Run(() => ZipFile.CreateFromDirectory(FormPath, formArchive, CompressionLevel.Optimal, false), token);
+        await RunStageAsync($"Compress folder '{FormPath}'", () => Task.Run(() => ZipFile.CreateFromDirectory(FormPath, formArchive, CompressionLevel.Optimal, false), token));
         if (!File.Exists(formArchive) || new FileInfo(formArchive).Length == 0)
             throw new IOException("The form_path ZIP archive could not be created or is empty.");
         created.Add(formArchive);
         bytes += new FileInfo(formArchive).Length;
 
         token.ThrowIfCancellationRequested();
-        string sqlServerBackup = await SqlBackupService.CreateBackupAsync(sqlConnection, databaseName, token);
+        string sqlServerBackup = await RunStageAsync($"Create SQL backup for database '{databaseName}'", () => SqlBackupService.CreateBackupAsync(sqlConnection, databaseName, token));
         string sqlTarget = Path.Combine(stagingDirectory, "database.bak");
-        await SqlBackupService.CopyAndCleanupAsync(sqlServerBackup, sqlTarget, token);
+        await RunStageAsync($"Copy SQL backup from '{sqlServerBackup}'", () => SqlBackupService.CopyAndCleanupAsync(sqlServerBackup, sqlTarget, token));
         created.Add(sqlTarget);
         bytes += new FileInfo(sqlTarget).Length;
 
         return new BusinessBackupResult(bytes, created);
+    }
+
+    private static async Task RunStageAsync(string stage, Func<Task> action)
+    {
+        try
+        {
+            await action();
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            throw new IOException($"Backup step failed: {stage}. Details: {ex.Message}", ex);
+        }
+    }
+
+    private static async Task<T> RunStageAsync<T>(string stage, Func<Task<T>> action)
+    {
+        try
+        {
+            return await action();
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            throw new IOException($"Backup step failed: {stage}. Details: {ex.Message}", ex);
+        }
     }
 
     private static async Task ExportWindowsPrintersAsync(string targetPath, CancellationToken token)
