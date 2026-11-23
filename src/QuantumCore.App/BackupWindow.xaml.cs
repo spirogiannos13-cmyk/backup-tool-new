@@ -126,7 +126,13 @@ public partial class BackupWindow : Window
         try
         {
             string backupName = "QuantumCore_Backup";
-            string stagingParent = useMega ? Path.GetTempPath() : DestinationBox.Text;
+            // For MEGA, stage beside SQL Server's own backup directory. Its inherited
+            // permissions already allow the SQL Server service to create database.bak,
+            // and the signed-in user can read the completed file for zipping/upload.
+            // This avoids relying on C:\database or the user's private AppData\Temp.
+            string stagingParent = useMega
+                ? await SqlBackupService.GetBackupStagingParentAsync(sqlConnection, _cancellation.Token)
+                : DestinationBox.Text;
             staging = Path.Combine(stagingParent, ".QuantumCore_Staging_" + Guid.NewGuid().ToString("N"));
             StatusText.Text = "Exporting Windows printers and checking required backup sources…";
             BackupProgress.IsIndeterminate = true;
@@ -136,7 +142,7 @@ public partial class BackupWindow : Window
             _cancellation.Token.ThrowIfCancellationRequested();
             if (useMega)
             {
-                string archive = Path.Combine(Path.GetTempPath(), backupName + "_" + Guid.NewGuid().ToString("N") + ".zip");
+                string archive = Path.Combine(stagingParent, backupName + "_" + Guid.NewGuid().ToString("N") + ".zip");
                 try
                 {
                     StatusText.Text = "Packaging business backup…";
