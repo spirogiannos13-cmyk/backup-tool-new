@@ -76,11 +76,32 @@ public static class SqlBackupService
         string escapedPath = serverFilePath.Replace("'", "''");
         string escapedDatabase = databaseName.Replace("]", "]]");
 
-        await using (var command = new SqlCommand(
-            $"BACKUP DATABASE [{escapedDatabase}] TO DISK = N'{escapedPath}' WITH COPY_ONLY, INIT, CHECKSUM, STATS = 10;", sql))
+        // Explicitly request native SQL Server backup compression to reduce the
+        // amount of data written locally and uploaded to MEGA. Express Edition does
+        // not support backup compression; only that specific unsupported-feature
+        // error is allowed to fall back to a normal backup.
+        string compressedBackupSql =
+            $"BACKUP DATABASE [{escapedDatabase}] TO DISK = N'{escapedPath}' WITH COPY_ONLY, INIT, CHECKSUM, COMPRESSION, STATS = 10;";
+        string uncompressedBackupSql =
+            $"BACKUP DATABASE [{escapedDatabase}] TO DISK = N'{escapedPath}' WITH COPY_ONLY, INIT, CHECKSUM, STATS = 10;";
+
+        try
         {
-            command.CommandTimeout = 0;
+            await using var command = new SqlCommand(compressedBackupSql, sql)
+            {
+                CommandTimeout = 0
+            };
             await command.ExecuteNonQueryAsync(cancellationToken);
+        }
+        catch (SqlException ex) when (ex.Number == 1844)
+        {
+            // SQL Server Express: compression isn't supported by this edition.
+            // Re-run without COMPRESSION rather than failing the whole backup.
+            await using var fallbackCommand = new SqlCommand(uncompressedBackupSql, sql)
+            {
+                CommandTimeout = 0
+            };
+            await fallbackCommand.ExecuteNonQueryAsync(cancellationToken);
         }
 
         // Verify that the SQL Server-created file is visible to this PC before declaring success.
