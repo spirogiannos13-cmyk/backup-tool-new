@@ -69,25 +69,35 @@ public static class SqlBackupService
 
     public static async Task CopyAndCleanupAsync(string serverFilePath, string destinationPath, CancellationToken token)
     {
-        Directory.CreateDirectory(Path.GetDirectoryName(destinationPath)!);
-        await using (var input = new FileStream(serverFilePath, FileMode.Open, FileAccess.Read, FileShare.Read, 1024 * 1024, true))
-        await using (var output = new FileStream(destinationPath, FileMode.CreateNew, FileAccess.Write, FileShare.None, 1024 * 1024, true))
-        {
-            await input.CopyToAsync(output, 1024 * 1024, token);
-            await output.FlushAsync(token);
-        }
+        string destinationDirectory = Path.GetDirectoryName(destinationPath)!;
+        Directory.CreateDirectory(destinationDirectory);
+        string stagingPath = destinationPath + ".partial";
 
-        await using var sourceHashStream = new FileStream(serverFilePath, FileMode.Open, FileAccess.Read, FileShare.Read, 1024 * 1024, true);
-        await using var destinationHashStream = new FileStream(destinationPath, FileMode.Open, FileAccess.Read, FileShare.Read, 1024 * 1024, true);
-        byte[] sourceHash = await System.Security.Cryptography.SHA256.HashDataAsync(sourceHashStream, token);
-        byte[] destinationHash = await System.Security.Cryptography.SHA256.HashDataAsync(destinationHashStream, token);
-        if (!System.Security.Cryptography.CryptographicOperations.FixedTimeEquals(sourceHash, destinationHash))
+        try
         {
-            File.Delete(destinationPath);
-            throw new IOException("The SQL .bak file failed the integrity check after copying. Backup is marked as failed.");
-        }
+            await using (var input = new FileStream(serverFilePath, FileMode.Open, FileAccess.Read, FileShare.Read, 1024 * 1024, true))
+            await using (var output = new FileStream(stagingPath, FileMode.Create, FileAccess.Write, FileShare.None, 1024 * 1024, true))
+            {
+                await input.CopyToAsync(output, 1024 * 1024, token);
+                await output.FlushAsync(token);
+            }
 
-        try { File.Delete(serverFilePath); } catch { /* The completed local copy is valid; leave server-side cleanup for an administrator. */ }
+            await using var sourceHashStream = new FileStream(serverFilePath, FileMode.Open, FileAccess.Read, FileShare.Read, 1024 * 1024, true);
+            await using var destinationHashStream = new FileStream(stagingPath, FileMode.Open, FileAccess.Read, FileShare.Read, 1024 * 1024, true);
+            byte[] sourceHash = await System.Security.Cryptography.SHA256.HashDataAsync(sourceHashStream, token);
+            byte[] destinationHash = await System.Security.Cryptography.SHA256.HashDataAsync(destinationHashStream, token);
+            if (!System.Security.Cryptography.CryptographicOperations.FixedTimeEquals(sourceHash, destinationHash))
+                throw new IOException("The SQL .bak file failed the integrity check after copying.");
+
+            File.Move(stagingPath, destinationPath, overwrite: false);
+            try { File.Delete(serverFilePath); } catch { /* Keep the verified local copy; server-side cleanup can be done later. */ }
+        }
+        catch
+        {
+            try { if (File.Exists(stagingPath)) File.Delete(stagingPath); } catch { }
+            try { if (File.Exists(destinationPath)) File.Delete(destinationPath); } catch { }
+            throw;
+        }
     }
 
     private static bool IsLocalServer(string server)
