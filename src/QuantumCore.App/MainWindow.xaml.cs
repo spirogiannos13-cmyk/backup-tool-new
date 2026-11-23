@@ -152,6 +152,7 @@ public partial class MainWindow : Window
     }
 
     private static double FormatMegabytes(long bytes) => bytes / 1024d / 1024d;
+    private static double FormatMegabytes(double bytesPerSecond) => bytesPerSecond / 1024d / 1024d;
 
     private static string FormatDuration(TimeSpan duration)
     {
