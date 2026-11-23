@@ -131,9 +131,11 @@ public partial class MainWindow : Window
         {
             var snapshot = await SystemMonitorService.ReadAsync();
             CpuInfoText.Text = "CPU · " + snapshot.Cpu;
-            MemoryInfoText.Text = "RAM · " + snapshot.Memory;
+            MemoryInfoText.Text = $"RAM · {snapshot.Memory}  ({snapshot.MemoryPercent:0}%)";
+            MemoryUsageBar.Value = snapshot.MemoryPercent;
             DiskInfoText.Text = "DISKS · " + snapshot.Disk;
-            TemperatureInfoText.Text = "TEMPERATURE · " + snapshot.Temperature;
+            DiskUsageBar.Value = snapshot.DiskPercent;
+            TemperatureInfoText.Text = snapshot.Temperature;
             WindowsInfoText.Text = "OS · " + snapshot.Windows;
         }
         catch
