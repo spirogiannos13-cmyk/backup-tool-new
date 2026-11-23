@@ -66,10 +66,11 @@ public static class BusinessBackupService
             string target = Path.Combine(stagingDirectory, fileName);
             await RunStageAsync($"Export Registry key '{registryKey}'", () => ExportRegistryKeyAsync(registryKey, target, token));
             created.Add(target);
-            Report(fileName == "printers.reg" ? 4 : 5, fileName == "printers.reg" ? "Exporting application registry settings" : "Compressing form_path");
+            Report(fileName == "printers.reg" ? 4 : 5, "Exporting Registry settings");
             bytes += new FileInfo(target).Length;
         }
 
+        Report(5, "Compressing form_path");
         string formArchive = Path.Combine(stagingDirectory, "form_path.zip");
         await RunStageAsync($"Compress folder '{FormPath}'", () => Task.Run(() => ZipFile.CreateFromDirectory(FormPath, formArchive, CompressionLevel.Optimal, false), token));
         if (!File.Exists(formArchive) || new FileInfo(formArchive).Length == 0)
