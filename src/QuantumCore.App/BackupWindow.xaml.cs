@@ -11,10 +11,65 @@ public partial class BackupWindow : Window
 {
     private readonly List<string> _sources = [];
     private CancellationTokenSource? _cancellation;
+    private List<SavedSqlConnection> _sqlConnections = [];
     public string? CreatedBackupPath { get; private set; }
     public long BytesCopied { get; private set; }
 
-    public BackupWindow() => InitializeComponent();
+
+    public BackupWindow()
+    {
+        InitializeComponent();
+        _sqlConnections = SqlConnectionStore.Load();
+        SqlConnectionCombo.ItemsSource = _sqlConnections;
+        if (_sqlConnections.Count > 0) SqlConnectionCombo.SelectedIndex = 0;
+    }
+
+    private void SqlConnectionCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        SqlDatabaseCombo.ItemsSource = null;
+    }
+
+    private async void LoadSqlDatabases_Click(object sender, RoutedEventArgs e)
+    {
+        if (SqlConnectionCombo.SelectedItem is not SavedSqlConnection connection)
+        {
+            MessageBox.Show(this, "Add or select a saved SQL connection first.", "SQL connection required",
+                MessageBoxButton.OK, MessageBoxImage.Information);
+            return;
+        }
+        try
+        {
+            StatusText.Text = "Connecting to SQL Server and loading databases…";
+            StartButton.IsEnabled = false;
+            await using var sql = new Microsoft.Data.SqlClient.SqlConnection(connection.GetConnectionString("master"));
+            await sql.OpenAsync();
+            await using var command = new Microsoft.Data.SqlClient.SqlCommand(
+                "SELECT name FROM sys.databases WHERE database_id > 4 AND state_desc = N'ONLINE' ORDER BY name;", sql);
+            await using var reader = await command.ExecuteReaderAsync();
+            var databases = new List<string>();
+            while (await reader.ReadAsync()) databases.Add(reader.GetString(0));
+            SqlDatabaseCombo.ItemsSource = databases;
+            if (databases.Count > 0) SqlDatabaseCombo.SelectedIndex = 0;
+            StatusText.Text = databases.Count == 0 ? "No online user databases found." : $"Loaded {databases.Count} SQL database(s).";
+        }
+        catch (Exception ex)
+        {
+            StatusText.Text = "Could not load SQL databases.";
+            MessageBox.Show(this, ex.Message, "SQL connection failed", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+        finally { StartButton.IsEnabled = true; }
+    }
+
+    private void ManageSql_Click(object sender, RoutedEventArgs e)
+    {
+        var dialog = new SqlConnectionManagerWindow { Owner = this };
+        dialog.ShowDialog();
+        _sqlConnections = SqlConnectionStore.Load();
+        SqlConnectionCombo.ItemsSource = null;
+        SqlConnectionCombo.ItemsSource = _sqlConnections;
+        if (_sqlConnections.Count > 0) SqlConnectionCombo.SelectedIndex = 0;
+    }
+
 
     private void AddFiles_Click(object sender, RoutedEventArgs e)
     {
@@ -60,7 +115,18 @@ public partial class BackupWindow : Window
             return;
         }
 
+
+        var selectedSqlConnection = SqlConnectionCombo.SelectedItem as SavedSqlConnection;
+        var selectedSqlDatabase = SqlDatabaseCombo.SelectedItem as string;
+        if ((selectedSqlConnection is null) != (selectedSqlDatabase is null))
+        {
+            MessageBox.Show(this, "Select both a SQL connection and a database, or leave both SQL fields empty.",
+                "Incomplete SQL selection", MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
+        }
+
         bool useMega = DestinationModeCombo.SelectedIndex == 1;
+
         string? megaEmail = null;
         string? megaPassword = null;
         string? loginMfaCode = null;
@@ -144,8 +210,27 @@ public partial class BackupWindow : Window
                 StatusText.Text = $"Prepared {completed:N0} of {files.Count:N0} files";
             }
 
+
+            if (selectedSqlConnection is not null && selectedSqlDatabase is not null)
+            {
+                StatusText.Text = $"Creating SQL backup for {selectedSqlDatabase}…";
+                BackupProgress.IsIndeterminate = true;
+                string sqlBackupPath = await SqlBackupService.CreateBackupAsync(
+                    selectedSqlConnection, selectedSqlDatabase, _cancellation.Token);
+                BackupProgress.IsIndeterminate = false;
+                string sqlTargetDirectory = Path.Combine(backupRoot, "SQL");
+                string sqlTargetPath = Path.Combine(sqlTargetDirectory, Path.GetFileName(sqlBackupPath));
+                StatusText.Text = "Copying and verifying SQL .bak file…";
+                await SqlBackupService.CopyAndCleanupAsync(sqlBackupPath, sqlTargetPath, _cancellation.Token);
+                copiedBytes += new FileInfo(sqlTargetPath).Length;
+                BackupProgress.Value = 100;
+                ProgressLabel.Text = "100%";
+                StatusText.Text = $"SQL backup added: {Path.GetFileName(sqlTargetPath)}";
+            }
+
             BytesCopied = copiedBytes;
             if (useMega)
+
             {
                 string archivePath = Path.Combine(temporaryFolder!, backupName + ".zip");
                 StatusText.Text = "Packaging backup for MEGA…";
@@ -219,7 +304,7 @@ public partial class BackupWindow : Window
         catch (OperationCanceledException)
         {
             BackupProgress.IsIndeterminate = false;
-            StatusText.Text = "Backup cancelled. Any partial local data remains in the temporary or destination folder.";
+            StatusText.Text = "Backup cancelled. The operation did not complete successfully.";
             StartButton.IsEnabled = true;
             CancelButton.Content = "Close";
         }
