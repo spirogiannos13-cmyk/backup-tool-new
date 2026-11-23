@@ -169,6 +169,9 @@
                     <Button DockPanel.Dock="Right" Content="Discover" Click="Discover_Click" Margin="8,0,0,0"/>
                     <TextBox x:Name="ServerBox"/>
                 </DockPanel>
+                <TextBlock Text="SQL backup folder on server (optional for local)" Foreground="#8CA7C5" FontSize="11" Margin="0,0,0,5"/>
+                <TextBox x:Name="BackupDirectoryBox" ToolTip="Remote SQL: UNC path such as \\\\SERVER\\SqlBackups. SQL Server service needs write access; this PC needs read access." Margin="0,0,0,5"/>
+                <TextBlock Text="For remote servers use a UNC share (\\\\server\\share\\folder)." Foreground="#7894B2" FontSize="10" TextWrapping="Wrap" Margin="0,0,0,10"/>
                 <TextBlock Text="Detected local instances" Foreground="#8CA7C5" FontSize="11" Margin="0,0,0,5"/>
                 <ComboBox x:Name="DiscoveredServersCombo" SelectionChanged="DiscoveredServersCombo_SelectionChanged" Margin="0,0,0,13"/>
                 <TextBlock Text="Authentication" Foreground="#8CA7C5" FontSize="11" Margin="0,0,0,5"/>
