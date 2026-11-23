@@ -74,7 +74,7 @@ public partial class SqlConnectionManagerWindow : Window
         AuthenticationCombo.SelectedIndex = 0;
         UsernameBox.Text = "";
         PasswordBox.Password = "";
-        DatabasesList.Items.Clear();
+        DatabasesList.ItemsSource = null;
         DatabaseStatusText.Text = "Connect to a SQL Server to list its databases.";
         StatusText.Text = "Enter the details for a new SQL connection.";
     }
