@@ -50,6 +50,37 @@ public partial class MainWindow : Window
             BackupProgressBar.Value = status.Percent;
             BackupPercentText.Text = $"{status.Percent}%";
             BackupStageText.Text = status.Stage;
+            bool isMegaUpload = status.Stage.Contains("Uploading to MEGA", StringComparison.OrdinalIgnoreCase)
+                || status.Stage.Contains("upload stream", StringComparison.OrdinalIgnoreCase)
+                || status.Stage.Contains("uploading backup to MEGA", StringComparison.OrdinalIgnoreCase)
+                || status.Stage.Contains("retrying MEGA upload", StringComparison.OrdinalIgnoreCase);
+            if (isMegaUpload && status.TotalUploadBytes > 0)
+            {
+                DateTime lastProgress = status.LastUploadProgressAt ?? status.UpdatedAt;
+                TimeSpan sinceProgress = DateTime.Now - lastProgress;
+                if (sinceProgress.TotalSeconds >= 45)
+                {
+                    UploadDetailsText.Text = $"NO UPLOAD PROGRESS · Last activity {FormatDuration(sinceProgress)} ago · Attempt {status.RetryAttempt}/3";
+                    UploadDetailsText.Foreground = System.Windows.Media.Brushes.Orange;
+                }
+                else
+                {
+                    string speed = status.UploadSpeedBytesPerSecond > 0
+                        ? $"{FormatMegabytes(status.UploadSpeedBytesPerSecond)}/s"
+                        : "Calculating…";
+                    long remainingBytes = Math.Max(0, status.TotalUploadBytes - status.UploadedBytes);
+                    string eta = status.UploadSpeedBytesPerSecond > 0
+                        ? FormatDuration(TimeSpan.FromSeconds(remainingBytes / status.UploadSpeedBytesPerSecond))
+                        : "Calculating…";
+                    UploadDetailsText.Text = $"{FormatMegabytes(status.UploadedBytes)} MB / {FormatMegabytes(status.TotalUploadBytes)} MB · {speed} · ETA {eta} · Attempt {status.RetryAttempt}/3";
+                    UploadDetailsText.Foreground = System.Windows.Media.Brushes.LightSkyBlue;
+                }
+            }
+            else
+            {
+                UploadDetailsText.Text = "";
+                UploadDetailsText.Foreground = System.Windows.Media.Brushes.LightSkyBlue;
+            }
             ActivityTitle.Text = status.ScheduleName;
             ActivityDescription.Text = $"{status.Stage} · Started {status.StartedAt:HH:mm:ss}";
             if (status.IsRunning)
@@ -70,6 +101,7 @@ public partial class MainWindow : Window
             BackupProgressBar.Value = 0;
             BackupPercentText.Text = "0%";
             BackupStageText.Text = "Waiting for the next scheduled operation";
+            UploadDetailsText.Text = "";
             ActivityStatusText.Text = "No scheduled backup is running";
             CoreStateText.Text = "IDLE";
         }
@@ -117,6 +149,16 @@ public partial class MainWindow : Window
         ScheduleCountdownText.Text = remaining.TotalDays >= 1
             ? $"{(int)remaining.TotalDays}d {remaining.Hours:00}:{remaining.Minutes:00}:{remaining.Seconds:00}"
             : $"{(int)remaining.TotalHours:00}:{remaining.Minutes:00}:{remaining.Seconds:00}";
+    }
+
+    private static double FormatMegabytes(long bytes) => bytes / 1024d / 1024d;
+
+    private static string FormatDuration(TimeSpan duration)
+    {
+        if (duration < TimeSpan.Zero) duration = TimeSpan.Zero;
+        if (duration.TotalDays >= 1)
+            return $"{(int)duration.TotalDays}d {duration.Hours:00}:{duration.Minutes:00}:{duration.Seconds:00}";
+        return $"{(int)duration.TotalHours:00}:{duration.Minutes:00}:{duration.Seconds:00}";
     }
 
     private static DateTime GetNextRun(BackupSchedule schedule, DateTime now)
