@@ -2,6 +2,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Threading;
 using System.Windows.Media.Animation;
+using CG.Web.MegaApiClient;
 
 namespace QuantumCore.App;
 
@@ -340,8 +341,101 @@ public partial class MainWindow : Window
         ShowPage("History & Logs", "Execution History", "Review manual and scheduled backup operations.", HistoryPage, HistoryNav);
         LoadHistoryEntries();
     }
-    private void Cloud_Click(object sender, RoutedEventArgs e) =>
-        ShowPage("Cloud & Storage", "Cloud Destinations", "Manage the cloud destination used by your backup workflows.", CloudPage, CloudNav);
+    private void RefreshMegaAccount_Click(object sender, RoutedEventArgs e) => RefreshMegaAccountPanel();
+
+    private void RefreshMegaAccountPanel()
+    {
+        bool connected = MegaAccountStore.TryLoad(out var account) && account is not null;
+        MegaConnectionStateText.Text = connected ? "CONNECTED" : "NOT CONNECTED";
+        MegaConnectionStateText.Foreground = connected
+            ? System.Windows.Media.Brushes.LightGreen
+            : System.Windows.Media.Brushes.Orange;
+        MegaConnectionEmailText.Text = connected ? account!.Email : "No saved MEGA account";
+        MegaConnectionHintText.Text = connected
+            ? "An encrypted MEGA session is saved on this Windows account."
+            : "Connect an account and enable Remember Account to use scheduled cloud backups.";
+        DisconnectMegaAccountButtonState(connected);
+    }
+
+    private void DisconnectMegaAccountButtonState(bool connected)
+    {
+        foreach (var button in FindVisualChildren<Button>(CloudPage))
+        {
+            if (button.Content?.ToString() == "DISCONNECT MEGA")
+                button.IsEnabled = connected;
+        }
+    }
+
+    private static IEnumerable<T> FindVisualChildren<T>(DependencyObject parent) where T : DependencyObject
+    {
+        for (int i = 0; i < System.Windows.Media.VisualTreeHelper.GetChildrenCount(parent); i++)
+        {
+            var child = System.Windows.Media.VisualTreeHelper.GetChild(parent, i);
+            if (child is T typed) yield return typed;
+            foreach (var descendant in FindVisualChildren<T>(child)) yield return descendant;
+        }
+    }
+
+    private async void ConnectMegaAccount_Click(object sender, RoutedEventArgs e)
+    {
+        var dialog = new MegaLoginWindow { Owner = this };
+        if (dialog.ShowDialog() != true) return;
+
+        MegaManagementMessageText.Text = "Connecting securely to MEGA…";
+        try
+        {
+            var client = new MegaApiClient();
+            var session = await client.LoginAsync(dialog.Email, dialog.Password, dialog.MfaCode)
+                .WaitAsync(TimeSpan.FromSeconds(45));
+            if (dialog.RememberAccount)
+            {
+                MegaAccountStore.Save(dialog.Email, session);
+                MegaManagementMessageText.Text = "MEGA connected. The encrypted session has been saved for scheduled backups.";
+            }
+            else
+            {
+                MegaManagementMessageText.Text = "MEGA login verified, but Remember Account was not selected. The session was not saved; scheduled backups need a saved session.";
+            }
+            try { await client.LogoutAsync(); } catch { }
+        }
+        catch (Exception ex)
+        {
+            MegaManagementMessageText.Text = "Could not connect to MEGA.";
+            MessageBox.Show(this, ex.Message, "MEGA connection failed", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+        RefreshMegaAccountPanel();
+    }
+
+    private void DisconnectMegaAccount_Click(object sender, RoutedEventArgs e)
+    {
+        if (!MegaAccountStore.TryLoad(out var account) || account is null)
+        {
+            RefreshMegaAccountPanel();
+            return;
+        }
+
+        var answer = MessageBox.Show(this,
+            $"Disconnect {account.Email}?\\n\\nThe saved encrypted session will be removed. Manual MEGA backups will ask you to sign in again, and scheduled MEGA backups will not work until a new session is saved.",
+            "Disconnect MEGA", MessageBoxButton.YesNo, MessageBoxImage.Warning);
+        if (answer != MessageBoxResult.Yes) return;
+
+        try
+        {
+            MegaAccountStore.Remove();
+            MegaManagementMessageText.Text = "MEGA account disconnected. You can connect another account at any time.";
+            RefreshMegaAccountPanel();
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show(this, ex.Message, "Could not disconnect MEGA", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
+
+    private void Cloud_Click(object sender, RoutedEventArgs e)
+    {
+        ShowPage("Cloud & Storage", "MEGA Account Management", "Connect, change or disconnect your cloud account.", CloudPage, CloudNav);
+        RefreshMegaAccountPanel();
+    }
     private void Settings_Click(object sender, RoutedEventArgs e) =>
         ShowPage("Settings", "Quantum Core Settings", "Application preferences and system configuration.", SettingsPage, SettingsNav);
 
