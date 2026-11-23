@@ -213,6 +213,11 @@
                 <ComboBoxItem Content="Local folder" Background="#101F33" Foreground="#EDF7FF"/>
                 <ComboBoxItem Content="MEGA cloud" Background="#101F33" Foreground="#EDF7FF"/>
             </ComboBox>
+            <DockPanel x:Name="MegaAccountPanel" Margin="0,0,0,9" LastChildFill="True">
+                <Button DockPanel.Dock="Right" Content="Disconnect MEGA" Click="DisconnectMega_Click" Margin="8,0,0,0"/>
+                <TextBlock x:Name="MegaAccountText" Foreground="#8CA7C5" VerticalAlignment="Center"
+                           Text="No saved MEGA account."/>
+            </DockPanel>
             <DockPanel x:Name="LocalDestinationPanel">
                 <Button DockPanel.Dock="Right" Content="Browse…" Click="BrowseDestination_Click" Margin="8,0,0,0"/>
                 <TextBox x:Name="DestinationBox" IsReadOnly="True" Text="Select a destination folder…" VerticalContentAlignment="Center"/>
