@@ -247,6 +247,7 @@ public partial class BackupWindow : Window
                     StartedAt = operationStartedAt,
                     FinishedAt = DateTime.Now,
                     Success = true,
+                    Status = "SUCCESS",
                     Destination = CreatedBackupPath ?? (useMega ? "MEGA:/QuantumCore_Backup.zip" : DestinationBox.Text),
                     BytesWritten = BytesCopied,
                     Message = $"Completed successfully. {FormatBytes(BytesCopied)}."
@@ -269,6 +270,8 @@ public partial class BackupWindow : Window
         }
         catch (OperationCanceledException)
         {
+            TryRecordManualHistory(operationStartedAt, DateTime.Now, false, "CANCELLED",
+                "CANCELLED: Backup cancelled by the user.", useMega ? "MEGA:/QuantumCore_Backup.zip" : DestinationBox.Text, 0);
             BackupProgress.IsIndeterminate = false;
             StatusText.Text = "Backup cancelled. The previous completed backup was not replaced.";
             StartButton.IsEnabled = true;
@@ -276,6 +279,8 @@ public partial class BackupWindow : Window
         }
         catch (Exception ex)
         {
+            TryRecordManualHistory(operationStartedAt, DateTime.Now, false, "FAILED",
+                "FAILED: " + ex, useMega ? "MEGA:/QuantumCore_Backup.zip" : DestinationBox.Text, 0);
             BackupProgress.IsIndeterminate = false;
             StatusText.Text = "Business backup failed. The previous completed backup was not replaced.";
             StartButton.IsEnabled = true;
@@ -293,6 +298,30 @@ public partial class BackupWindow : Window
             _cancellation?.Dispose();
             _cancellation = null;
             BackupProgress.IsIndeterminate = false;
+        }
+    }
+
+    private static void TryRecordManualHistory(DateTime startedAt, DateTime finishedAt, bool success,
+        string status, string message, string destination, long bytesWritten)
+    {
+        try
+        {
+            ScheduledBackupHistoryStore.Add(new ScheduledBackupHistoryEntry
+            {
+                ScheduleId = "manual",
+                ScheduleName = "Manual Business Backup",
+                StartedAt = startedAt,
+                FinishedAt = finishedAt,
+                Success = success,
+                Status = status,
+                Destination = destination,
+                BytesWritten = bytesWritten,
+                Message = message
+            });
+        }
+        catch
+        {
+            // Preserve the original backup outcome if history storage itself is unavailable.
         }
     }
 
