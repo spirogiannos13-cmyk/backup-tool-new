@@ -14,6 +14,9 @@ public sealed class BackupSchedule
     public string Frequency { get; set; } = "Daily";
     public string DayOfWeek { get; set; } = "Monday";
     public string Time { get; set; } = "03:00";
+    public string BackupProfile { get; set; } = "Business";
+    public string SqlConnectionId { get; set; } = "";
+    public string DatabaseName { get; set; } = "";
 }
 
 public static class ScheduleStore
@@ -86,5 +89,46 @@ public static class WindowsTaskScheduler
         var output = (await stdout) + Environment.NewLine + (await stderr);
         if (process.ExitCode != 0 && !allowMissing)
             throw new InvalidOperationException("Windows Task Scheduler could not register the backup. " + output.Trim());
+    }
+}
+
+
+public sealed class ScheduledBackupHistoryEntry
+{
+    public string ScheduleId { get; set; } = "";
+    public string ScheduleName { get; set; } = "";
+    public DateTime StartedAt { get; set; }
+    public DateTime FinishedAt { get; set; }
+    public bool Success { get; set; }
+    public string Destination { get; set; } = "MEGA:/QuantumCore_Backup.zip";
+    public long BytesWritten { get; set; }
+    public string Message { get; set; } = "";
+}
+
+public static class ScheduledBackupHistoryStore
+{
+    private static string FilePath => Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+        "QuantumCore", "scheduled-backup-history.json");
+
+    public static List<ScheduledBackupHistoryEntry> Load()
+    {
+        try
+        {
+            if (!File.Exists(FilePath)) return [];
+            return System.Text.Json.JsonSerializer.Deserialize<List<ScheduledBackupHistoryEntry>>(File.ReadAllText(FilePath)) ?? [];
+        }
+        catch { return []; }
+    }
+
+    public static void Add(ScheduledBackupHistoryEntry entry)
+    {
+        var entries = Load();
+        entries.Insert(0, entry);
+        if (entries.Count > 200) entries = entries.Take(200).ToList();
+        Directory.CreateDirectory(Path.GetDirectoryName(FilePath)!);
+        var temp = FilePath + ".tmp";
+        File.WriteAllText(temp, System.Text.Json.JsonSerializer.Serialize(entries, new System.Text.Json.JsonSerializerOptions { WriteIndented = true }));
+        File.Move(temp, FilePath, overwrite: true);
     }
 }
