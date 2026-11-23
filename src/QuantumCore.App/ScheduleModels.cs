@@ -52,6 +52,10 @@ public static class WindowsTaskScheduler
 
     public static async Task RegisterAsync(BackupSchedule schedule, CancellationToken cancellationToken = default)
     {
+        // Re-create the Windows task instead of relying on schtasks /Create /F to
+        // update an existing trigger. This ensures a changed start time is applied.
+        await DeleteAsync(schedule.Id, cancellationToken);
+
         var taskName = Prefix + schedule.Id;
         var appHost = Environment.ProcessPath ?? throw new InvalidOperationException("Cannot determine application executable path.");
         var assemblyPath = System.Reflection.Assembly.GetEntryAssembly()?.Location
