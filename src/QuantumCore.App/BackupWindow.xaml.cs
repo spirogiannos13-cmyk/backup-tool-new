@@ -189,7 +189,7 @@ public partial class BackupWindow : Window
                     }
                 }
             }
-            if (files.Count == 0) throw new InvalidOperationException("The selected sources contain no files.");
+            if (files.Count == 0 && selectedSqlConnection is null) throw new InvalidOperationException("The selected sources contain no files.");
 
             long totalBytes = files.Sum(f => new FileInfo(f.Source).Length);
             long copiedBytes = 0;
