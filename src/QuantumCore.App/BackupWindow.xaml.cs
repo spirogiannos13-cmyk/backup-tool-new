@@ -172,8 +172,11 @@ public partial class BackupWindow : Window
                     }
 
                     var root = client.GetNodes().Single(n => n.Type == NodeType.Root);
-                    string remoteFolderName = backupName + "_" + DateTime.Now.ToString("yyyyMMdd_HHmmss");
-                    var remoteFolder = client.CreateFolder(remoteFolderName, root);
+                    const string finalRemoteName = "QuantumCore_Backup.zip";
+                    string uploadTempName = "QuantumCore_Backup.uploading.zip";
+                    var existingTemp = client.GetNodes(root).FirstOrDefault(n => n.Type == NodeType.File && n.Name == uploadTempName);
+                    if (existingTemp is not null) await client.DeleteAsync(existingTemp, moveToTrash: false);
+                    var existingFinal = client.GetNodes(root).FirstOrDefault(n => n.Type == NodeType.File && n.Name == finalRemoteName);
                     var progress = new Progress<double>(p =>
                     {
                         BackupProgress.IsIndeterminate = false;
@@ -181,8 +184,15 @@ public partial class BackupWindow : Window
                         ProgressLabel.Text = $"{p:0}%";
                         StatusText.Text = $"Uploading business backup to MEGA… {p:0}%";
                     });
-                    await client.UploadFileAsync(archive, remoteFolder, progress, _cancellation.Token);
-                    CreatedBackupPath = "MEGA:/" + remoteFolderName + "/" + Path.GetFileName(archive);
+                    string uploadPath = Path.Combine(Path.GetDirectoryName(archive)!, uploadTempName);
+                    File.Move(archive, uploadPath, overwrite: true);
+                    archive = uploadPath;
+                    INode uploadedNode = await client.UploadFileAsync(uploadPath, root, progress, _cancellation.Token);
+                    _cancellation.Token.ThrowIfCancellationRequested();
+                    INode promotedNode = await client.RenameAsync(uploadedNode, finalRemoteName);
+                    if (existingFinal is not null)
+                        await client.DeleteAsync(existingFinal, moveToTrash: false);
+                    CreatedBackupPath = "MEGA:/" + promotedNode.Name;
                 }
                 finally
                 {
@@ -242,7 +252,7 @@ public partial class BackupWindow : Window
         string parent = Path.GetDirectoryName(finalDirectory)!;
         Directory.CreateDirectory(parent);
         string previousDirectory = finalDirectory + ".previous";
-        if (Directory.Exists(previousDirectory)) Directory.Delete(previousDirectory, true);
+        if (Directory.Exists(previousDirectory)) throw new IOException($"A previous backup cleanup folder already exists: {previousDirectory}. Inspect it before retrying.");
 
         bool movedPrevious = false;
         try
@@ -255,7 +265,7 @@ public partial class BackupWindow : Window
             Directory.Move(stagingDirectory, finalDirectory);
             if (movedPrevious)
             {
-                try { Directory.Delete(previousDirectory, true); } catch { /* The new verified backup is already promoted. */ }
+                Directory.Delete(previousDirectory, true);
             }
         }
         catch
