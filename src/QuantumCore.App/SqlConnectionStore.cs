@@ -10,6 +10,8 @@ public sealed class SavedSqlConnection
     public string Id { get; set; } = Guid.NewGuid().ToString("N");
     public string Name { get; set; } = "";
     public string Server { get; set; } = "";
+    // SQL Server-side directory. For remote servers this must be a UNC share accessible to both SQL Server and this PC.
+    public string BackupDirectory { get; set; } = "";
     public bool UseWindowsAuthentication { get; set; } = true;
     public string Username { get; set; } = "";
     public string? ProtectedPassword { get; set; }
