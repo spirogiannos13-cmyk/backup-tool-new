@@ -85,6 +85,7 @@ public static class BusinessBackupExecutionService
             if (!File.Exists(archive) || new FileInfo(archive).Length == 0)
                 throw new IOException("The scheduled Business Backup ZIP is missing or empty.");
 
+            long uploadedArchiveBytes = new FileInfo(archive).Length;
             var client = new MegaApiClient();
             await client.LoginAsync(account.ToToken()).WaitAsync(TimeSpan.FromSeconds(45), token);
             var root = client.GetNodes().Single(n => n.Type == NodeType.Root);
@@ -103,11 +104,11 @@ public static class BusinessBackupExecutionService
 
             INode uploaded = await client.UploadFileAsync(uploadPath, root, null, token);
             token.ThrowIfCancellationRequested();
-            INode promoted = await client.RenameAsync(uploaded, finalName);
+            await client.RenameAsync(uploaded, finalName);
             if (oldFinal is not null)
                 await client.DeleteAsync(oldFinal, moveToTrash: false);
 
-            return result.BytesWritten;
+            return uploadedArchiveBytes;
         }
         finally
         {
