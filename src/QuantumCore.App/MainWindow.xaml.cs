@@ -11,6 +11,7 @@ public partial class MainWindow : Window
     private readonly DispatcherTimer _dashboardTimer = new() { Interval = TimeSpan.FromSeconds(1) };
     private readonly DispatcherTimer _systemTimer = new() { Interval = TimeSpan.FromSeconds(15) };
     private bool _refreshingSystem;
+    private bool? _coreActivityState;
     private readonly CancellationTokenSource _uiShutdown = new();
 
     public MainWindow()
@@ -46,6 +47,7 @@ public partial class MainWindow : Window
     private void RefreshBackupDashboard()
     {
         var status = ScheduledBackupStatusStore.Load();
+        SetCoreActivity(status?.IsRunning == true && status.UpdatedAt > DateTime.Now.AddHours(-24));
         if (status is not null && status.UpdatedAt > DateTime.Now.AddHours(-24))
         {
             BackupProgressBar.Value = status.Percent;
@@ -86,7 +88,7 @@ public partial class MainWindow : Window
             ActivityDescription.Text = $"{status.Stage} · Started {status.StartedAt:HH:mm:ss}";
             if (status.IsRunning)
             {
-                CoreStateText.Text = "RUN";
+                CoreStateText.Text = "ACTIVE";
                 ActivityStatusText.Text = "Scheduled backup is running";
                 ActivityStatusText.Foreground = System.Windows.Media.Brushes.LightGreen;
             }
@@ -108,6 +110,22 @@ public partial class MainWindow : Window
         }
 
         RefreshScheduleCountdown();
+    }
+
+    private void SetCoreActivity(bool isRunning)
+    {
+        if (_coreActivityState == isRunning) return;
+        _coreActivityState = isRunning;
+
+        var idlePulse = (Storyboard)Resources["CorePulse"];
+        var activePulse = (Storyboard)Resources["CoreActivePulse"];
+        idlePulse.Stop(this);
+        activePulse.Stop(this);
+
+        if (isRunning)
+            activePulse.Begin(this, true);
+        else
+            idlePulse.Begin(this, true);
     }
 
     private void RefreshScheduleCountdown()
