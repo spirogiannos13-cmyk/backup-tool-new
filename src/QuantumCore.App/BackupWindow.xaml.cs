@@ -158,6 +158,8 @@ public partial class BackupWindow : Window
             remember = login.RememberAccount;
         }
 
+        DateTime operationStartedAt = DateTime.Now;
+        long backupSizeBytes = 0;
         StartButton.IsEnabled = false;
         CancelButton.Content = "Cancel operation";
         _cancellation = new CancellationTokenSource();
@@ -185,6 +187,7 @@ public partial class BackupWindow : Window
                 {
                     StatusText.Text = "Packaging business backup…";
                     await Task.Run(() => ZipFile.CreateFromDirectory(staging, archive, CompressionLevel.Optimal, false), _cancellation.Token);
+                    backupSizeBytes = new FileInfo(archive).Length;
                     _cancellation.Token.ThrowIfCancellationRequested();
 
                     StatusText.Text = "Connecting to MEGA…";
@@ -231,9 +234,29 @@ public partial class BackupWindow : Window
                 PromoteCompletedBackup(staging, finalDirectory);
                 staging = null;
                 CreatedBackupPath = finalDirectory;
+                backupSizeBytes = GetDirectorySize(finalDirectory);
             }
 
-            BytesCopied = result.BytesWritten;
+            BytesCopied = backupSizeBytes > 0 ? backupSizeBytes : result.BytesWritten;
+            try
+            {
+                ScheduledBackupHistoryStore.Add(new ScheduledBackupHistoryEntry
+                {
+                    ScheduleId = "manual",
+                    ScheduleName = "Manual Business Backup",
+                    StartedAt = operationStartedAt,
+                    FinishedAt = DateTime.Now,
+                    Success = true,
+                    Destination = CreatedBackupPath ?? (useMega ? "MEGA:/QuantumCore_Backup.zip" : DestinationBox.Text),
+                    BytesWritten = BytesCopied,
+                    Message = $"Completed successfully. {FormatBytes(BytesCopied)}."
+                });
+            }
+            catch (Exception historyError)
+            {
+                StatusText.Text = $"Backup completed, but history could not be saved: {historyError.Message}";
+            }
+
             BackupProgress.IsIndeterminate = false;
             BackupProgress.Value = 100;
             ProgressLabel.Text = "100%";
@@ -271,6 +294,12 @@ public partial class BackupWindow : Window
             _cancellation = null;
             BackupProgress.IsIndeterminate = false;
         }
+    }
+
+    private static long GetDirectorySize(string directory)
+    {
+        return Directory.EnumerateFiles(directory, "*", SearchOption.AllDirectories)
+            .Sum(file => new FileInfo(file).Length);
     }
 
     private static void PromoteCompletedBackup(string stagingDirectory, string finalDirectory)
