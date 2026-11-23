@@ -171,7 +171,7 @@ public static class BusinessBackupExecutionService
                 // contaminating subsequent retries.
                 var client = new MegaApiClient();
                 using var totalTimeout = new CancellationTokenSource(TimeSpan.FromMinutes(totalAttemptTimeoutMinutes));
-                using var idleTimeout = new CancellationTokenSource(TimeSpan.FromSeconds(idleTimeoutSeconds));
+                using var idleTimeout = new CancellationTokenSource();
                 using var uploadCancellation = CancellationTokenSource.CreateLinkedTokenSource(
                     token, totalTimeout.Token, idleTimeout.Token);
                 using var idleRegistration = idleTimeout.Token.Register(() => uploadCancellation.Cancel());
@@ -210,6 +210,7 @@ public static class BusinessBackupExecutionService
                         ? "Uploading backup to MEGA Cloud"
                         : $"Retrying MEGA upload · attempt {attempt}/{maxUploadAttempts}");
 
+                    idleTimeout.CancelAfter(TimeSpan.FromSeconds(idleTimeoutSeconds));
                     Task<INode> uploadTask = client.UploadFileAsync(
                         uploadPath, root, progressReporter, uploadCancellation.Token);
 
