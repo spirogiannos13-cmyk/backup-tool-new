@@ -132,13 +132,11 @@ public static class BusinessBackupService
             Verb = "runas",
             WorkingDirectory = Path.GetDirectoryName(targetPath)!
         };
-        // Explicitly identify this machine as the source print server.
-        // PrintBRM's documented backup syntax includes -s \\ServerName.
-        start.ArgumentList.Add("-s");
-        start.ArgumentList.Add(@"\\" + Environment.MachineName);
+        // Match the exact local command verified successfully by the user:
+        // PrintBrm.exe -b -f <absolute output path>
         start.ArgumentList.Add("-b");
         start.ArgumentList.Add("-f");
-        start.ArgumentList.Add(targetPath);
+        start.ArgumentList.Add(Path.GetFullPath(targetPath));
 
         using var process = new Process { StartInfo = start };
         try
