@@ -98,6 +98,12 @@ public static class SqlBackupService
             try { if (File.Exists(destinationPath)) File.Delete(destinationPath); } catch { }
             throw;
         }
+        finally
+        {
+            // The SQL Server creates a temporary .bak; remove it after the copy attempt
+            // so the server's backup directory does not accumulate old Quantum Core files.
+            try { if (File.Exists(serverFilePath)) File.Delete(serverFilePath); } catch { }
+        }
     }
 
     private static bool IsLocalServer(string server)
