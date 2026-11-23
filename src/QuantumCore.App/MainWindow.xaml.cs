@@ -10,22 +10,36 @@ public partial class MainWindow : Window
     private readonly DispatcherTimer _dashboardTimer = new() { Interval = TimeSpan.FromSeconds(1) };
     private readonly DispatcherTimer _systemTimer = new() { Interval = TimeSpan.FromSeconds(15) };
     private bool _refreshingSystem;
+    private readonly CancellationTokenSource _uiShutdown = new();
 
     public MainWindow()
     {
         InitializeComponent();
         Loaded += MainWindow_Loaded;
-        Closed += (_, _) => { _dashboardTimer.Stop(); _systemTimer.Stop(); };
+        Closing += (_, _) => BeginUiShutdown();
         _dashboardTimer.Tick += (_, _) => RefreshBackupDashboard();
         _systemTimer.Tick += async (_, _) => await RefreshSystemMonitorAsync();
     }
 
     private async void MainWindow_Loaded(object sender, RoutedEventArgs e)
     {
+        if (_uiShutdown.IsCancellationRequested) return;
         RefreshBackupDashboard();
         await RefreshSystemMonitorAsync();
+        if (_uiShutdown.IsCancellationRequested) return;
         _dashboardTimer.Start();
         _systemTimer.Start();
+    }
+
+    private void BeginUiShutdown()
+    {
+        if (_uiShutdown.IsCancellationRequested) return;
+
+        // Stop UI-only polling. Scheduled backups run in their own Task Scheduler
+        // process and are deliberately not cancelled when this window closes.
+        _dashboardTimer.Stop();
+        _systemTimer.Stop();
+        _uiShutdown.Cancel();
     }
 
     private void RefreshBackupDashboard()
@@ -129,7 +143,7 @@ public partial class MainWindow : Window
         _refreshingSystem = true;
         try
         {
-            var snapshot = await SystemMonitorService.ReadAsync();
+            var snapshot = await SystemMonitorService.ReadAsync(_uiShutdown.Token);
             CpuInfoText.Text = "CPU · " + snapshot.Cpu;
             MemoryInfoText.Text = $"RAM · {snapshot.Memory}  ({snapshot.MemoryPercent:0}%)";
             MemoryUsageBar.Value = snapshot.MemoryPercent;
@@ -138,9 +152,14 @@ public partial class MainWindow : Window
             TemperatureInfoText.Text = snapshot.Temperature;
             WindowsInfoText.Text = "OS · " + snapshot.Windows;
         }
+        catch (OperationCanceledException) when (_uiShutdown.IsCancellationRequested)
+        {
+            // The UI is closing; do not schedule or resume monitoring work.
+        }
         catch
         {
-            TemperatureInfoText.Text = "TEMPERATURE · Sensor data unavailable";
+            if (!_uiShutdown.IsCancellationRequested)
+                TemperatureInfoText.Text = "TEMPERATURE · Sensor data unavailable";
         }
         finally { _refreshingSystem = false; }
     }
