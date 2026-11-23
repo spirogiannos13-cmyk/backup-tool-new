@@ -75,8 +75,16 @@
             <Setter Property="FontWeight" Value="SemiBold"/>
         </Style>
         <Storyboard x:Key="CorePulse" RepeatBehavior="Forever" AutoReverse="True">
-            <DoubleAnimation Storyboard.TargetName="CoreGlow" Storyboard.TargetProperty="Opacity" From="0.28" To="0.82" Duration="0:0:2.4"/>
-            <DoubleAnimation Storyboard.TargetName="CoreRing" Storyboard.TargetProperty="Opacity" From="0.55" To="1" Duration="0:0:2.4"/>
+            <DoubleAnimation Storyboard.TargetName="CoreGlow" Storyboard.TargetProperty="Opacity" From="0.22" To="0.88" Duration="0:0:2.2"/>
+            <DoubleAnimation Storyboard.TargetName="CoreRing" Storyboard.TargetProperty="Opacity" From="0.42" To="1" Duration="0:0:2.2"/>
+            <DoubleAnimation Storyboard.TargetName="CoreAura" Storyboard.TargetProperty="Opacity" From="0.25" To="0.75" Duration="0:0:3.2"/>
+        </Storyboard>
+        <Storyboard x:Key="CoreRotate" RepeatBehavior="Forever">
+            <DoubleAnimation Storyboard.TargetName="CoreRing" Storyboard.TargetProperty="(UIElement.RenderTransform).(RotateTransform.Angle)" From="0" To="360" Duration="0:0:24"/>
+            <DoubleAnimation Storyboard.TargetName="CoreOrbit" Storyboard.TargetProperty="(UIElement.RenderTransform).(RotateTransform.Angle)" From="360" To="0" Duration="0:0:18"/>
+        </Storyboard>
+        <Storyboard x:Key="ScanlineSweep" RepeatBehavior="Forever">
+            <DoubleAnimation Storyboard.TargetName="ScanlineTransform" Storyboard.TargetProperty="Y" From="-900" To="900" Duration="0:0:12"/>
         </Storyboard>
     </Window.Resources>
 
@@ -92,7 +100,8 @@
             <ColumnDefinition Width="*"/>
         </Grid.ColumnDefinitions>
 
-        <Border Grid.Column="0" Background="#091422" BorderBrush="#1B3049" BorderThickness="0,0,1,0">
+        <Border Grid.Column="0" Background="#071321" BorderBrush="#17415A" BorderThickness="0,0,1,0">
+            <Border.Effect><DropShadowEffect Color="#12BDEB" BlurRadius="22" ShadowDepth="0" Opacity="0.16"/></Border.Effect>
             <DockPanel Margin="18,24">
                 <Border DockPanel.Dock="Bottom" Background="#101F33" BorderBrush="#294563" BorderThickness="1" CornerRadius="11" Padding="13" Margin="0,16,0,0">
                     <StackPanel>
@@ -179,7 +188,9 @@
                                         <TextBlock Text="Operations Monitor" FontSize="19" FontWeight="SemiBold" Margin="0,5,0,0"/></StackPanel>
                                     <Grid Grid.Row="1" MinHeight="220">
                                         <Ellipse x:Name="CoreGlow" Width="190" Height="190" Fill="#123F70" Opacity="0.55"><Ellipse.Effect><BlurEffect Radius="35"/></Ellipse.Effect></Ellipse>
-                                        <Ellipse x:Name="CoreRing" Width="154" Height="154" Stroke="#258DCE" StrokeThickness="1.2" Opacity="0.8"/>
+                                        <Ellipse x:Name="CoreAura" Width="178" Height="178" Stroke="#22CFFF" StrokeThickness="1" Opacity="0.35"><Ellipse.Effect><BlurEffect Radius="9"/></Ellipse.Effect></Ellipse>
+                                        <Ellipse x:Name="CoreRing" Width="154" Height="154" Stroke="#258DCE" StrokeThickness="1.5" Opacity="0.8"><Ellipse.RenderTransform><RotateTransform CenterX="77" CenterY="77"/></Ellipse.RenderTransform></Ellipse>
+                                        <Ellipse x:Name="CoreOrbit" Width="138" Height="138" Stroke="#52E9FF" StrokeThickness="1" StrokeDashArray="1 5" Opacity="0.75"><Ellipse.RenderTransform><RotateTransform CenterX="69" CenterY="69"/></Ellipse.RenderTransform></Ellipse>
                                         <Ellipse Width="122" Height="122" Stroke="#3DDFFF" StrokeThickness="1.5" Opacity="0.75">
                                             <Ellipse.Fill><RadialGradientBrush><GradientStop Color="#246A9A" Offset="0"/><GradientStop Color="#102A49" Offset="0.7"/><GradientStop Color="#0C1B30" Offset="1"/></RadialGradientBrush></Ellipse.Fill>
                                             <Ellipse.Effect><DropShadowEffect Color="#21BFFF" BlurRadius="30" ShadowDepth="0" Opacity="0.8"/></Ellipse.Effect>
@@ -360,8 +371,22 @@
                 <TextBlock Text="QUANTUM CORE  •  WINDOWS DESKTOP" FontSize="9" Foreground="#526D89"/>
             </Grid>
         </Grid>
+        <Canvas IsHitTestVisible="False" ClipToBounds="True">
+            <Rectangle Width="2000" Height="2" Opacity="0.28">
+                <Rectangle.Fill>
+                    <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
+                        <GradientStop Color="#0048E5FF" Offset="0"/>
+                        <GradientStop Color="#8A48E5FF" Offset="0.5"/>
+                        <GradientStop Color="#0048E5FF" Offset="1"/>
+                    </LinearGradientBrush>
+                </Rectangle.Fill>
+                <Rectangle.RenderTransform><TranslateTransform x:Name="ScanlineTransform" Y="-900"/></Rectangle.RenderTransform>
+            </Rectangle>
+        </Canvas>
     </Grid>
     <Window.Triggers>
         <EventTrigger RoutedEvent="Loaded"><BeginStoryboard Storyboard="{StaticResource CorePulse}"/></EventTrigger>
+        <EventTrigger RoutedEvent="Loaded"><BeginStoryboard Storyboard="{StaticResource CoreRotate}"/></EventTrigger>
+        <EventTrigger RoutedEvent="Loaded"><BeginStoryboard Storyboard="{StaticResource ScanlineSweep}"/></EventTrigger>
     </Window.Triggers>
 </Window>
