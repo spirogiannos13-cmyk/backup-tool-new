@@ -74,6 +74,10 @@
             <Setter Property="FontSize" Value="10"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
         </Style>
+        <Storyboard x:Key="CorePulse" RepeatBehavior="Forever" AutoReverse="True">
+            <DoubleAnimation Storyboard.TargetName="CoreGlow" Storyboard.TargetProperty="Opacity" From="0.28" To="0.82" Duration="0:0:2.4"/>
+            <DoubleAnimation Storyboard.TargetName="CoreRing" Storyboard.TargetProperty="Opacity" From="0.55" To="1" Duration="0:0:2.4"/>
+        </Storyboard>
     </Window.Resources>
 
     <Grid>
