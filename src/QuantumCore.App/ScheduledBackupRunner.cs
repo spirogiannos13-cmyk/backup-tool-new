@@ -150,81 +150,119 @@ public static class BusinessBackupExecutionService
                 throw new IOException("The scheduled Business Backup ZIP is missing or empty.");
 
             long uploadedArchiveBytes = new FileInfo(archive).Length;
-            reportProgress(84, "Connecting to MEGA Cloud");
-            var client = new MegaApiClient();
-            await client.LoginAsync(account.ToToken()).WaitAsync(TimeSpan.FromSeconds(45), token);
-            var root = client.GetNodes().Single(n => n.Type == NodeType.Root);
-
             const string finalName = "QuantumCore_Backup.zip";
             const string uploadingName = "QuantumCore_Backup.uploading.zip";
-            var oldUploading = client.GetNodes(root).FirstOrDefault(n => n.Type == NodeType.File && n.Name == uploadingName);
-            if (oldUploading is not null)
-                await client.DeleteAsync(oldUploading, moveToTrash: false);
-            var oldFinal = client.GetNodes(root).FirstOrDefault(n => n.Type == NodeType.File && n.Name == finalName);
-
             string uploadPath = Path.Combine(stagingParent, uploadingName);
             if (File.Exists(uploadPath)) File.Delete(uploadPath);
             File.Move(archive, uploadPath);
             archive = uploadPath;
 
             const int maxUploadAttempts = 3;
-            const int idleTimeoutSeconds = 90;
-            const int totalAttemptTimeoutMinutes = 90;
+            const int idleTimeoutSeconds = 300;
+            const int totalAttemptTimeoutMinutes = 120;
             INode? uploaded = null;
-            ScheduledBackupStatusStore.Write(schedule.Id, schedule.Name, true, 88,
-                "Connecting upload stream to MEGA", startedAt, 0, uploadedArchiveBytes, 0, 1, DateTime.Now);
+            Exception? lastUploadError = null;
+
             for (int attempt = 1; attempt <= maxUploadAttempts; attempt++)
             {
+                token.ThrowIfCancellationRequested();
+
+                // Use a fresh client for every attempt. Never start a retry until the
+                // previous UploadFileAsync task has actually completed after cancellation.
+                var client = new MegaApiClient();
+                using var attemptCancellation = CancellationTokenSource.CreateLinkedTokenSource(token);
                 using var totalTimeout = new CancellationTokenSource(TimeSpan.FromMinutes(totalAttemptTimeoutMinutes));
-                using var idleTimeout = new CancellationTokenSource(TimeSpan.FromSeconds(idleTimeoutSeconds));
-                using var uploadCancellation = CancellationTokenSource.CreateLinkedTokenSource(token, totalTimeout.Token, idleTimeout.Token);
-                var progressReporter = new MegaUploadProgressReporter(uploadedArchiveBytes, attempt,
-                    (uploadedBytes, totalBytes, speed, uploadPercent, lastProgressAt, retry) =>
-                    {
-                        int overallPercent = 88 + (int)Math.Round(uploadPercent * 0.09);
-                        ScheduledBackupStatusStore.Write(
-                            schedule.Id, schedule.Name, true, overallPercent,
-                            $"Uploading to MEGA · attempt {retry}/{maxUploadAttempts}",
-                            startedAt, uploadedBytes, totalBytes, speed, retry, lastProgressAt);
-                        reportProgress(overallPercent,
-                            $"Uploading to MEGA · {FormatBytes(uploadedBytes)} / {FormatBytes(totalBytes)}");
-                    },
-                    () => idleTimeout.CancelAfter(TimeSpan.FromSeconds(idleTimeoutSeconds)));
+                using var idleTimeout = new CancellationTokenSource();
+                using var uploadCancellation = CancellationTokenSource.CreateLinkedTokenSource(
+                    token, totalTimeout.Token, idleTimeout.Token);
 
                 try
                 {
+                    reportProgress(84, "Connecting to MEGA Cloud");
+                    await client.LoginAsync(account.ToToken()).WaitAsync(TimeSpan.FromSeconds(45), token);
+                    var root = client.GetNodes().Single(n => n.Type == NodeType.Root);
+
+                    var oldUploading = client.GetNodes(root)
+                        .FirstOrDefault(n => n.Type == NodeType.File && n.Name == uploadingName);
+                    if (oldUploading is not null)
+                        await client.DeleteAsync(oldUploading, moveToTrash: false);
+                    var oldFinal = client.GetNodes(root)
+                        .FirstOrDefault(n => n.Type == NodeType.File && n.Name == finalName);
+
+                    ScheduledBackupStatusStore.Write(schedule.Id, schedule.Name, true, 88,
+                        "Connecting upload stream to MEGA", startedAt, 0, uploadedArchiveBytes, 0, attempt, DateTime.Now);
+
+                    var progressReporter = new MegaUploadProgressReporter(uploadedArchiveBytes, attempt,
+                        (uploadedBytes, totalBytes, speed, uploadPercent, lastProgressAt, retry) =>
+                        {
+                            int overallPercent = 88 + (int)Math.Round(uploadPercent * 0.09);
+                            ScheduledBackupStatusStore.Write(
+                                schedule.Id, schedule.Name, true, overallPercent,
+                                $"Uploading to MEGA · attempt {retry}/{maxUploadAttempts}",
+                                startedAt, uploadedBytes, totalBytes, speed, retry, lastProgressAt);
+                            reportProgress(overallPercent,
+                                $"Uploading to MEGA · {FormatBytes(uploadedBytes)} / {FormatBytes(totalBytes)}");
+                        },
+                        () => idleTimeout.CancelAfter(TimeSpan.FromSeconds(idleTimeoutSeconds)));
+
                     reportProgress(88, attempt == 1
                         ? "Uploading backup to MEGA Cloud"
                         : $"Retrying MEGA upload · attempt {attempt}/{maxUploadAttempts}");
-                    uploaded = await client.UploadFileAsync(uploadPath, root, progressReporter, uploadCancellation.Token)
-                        .WaitAsync(uploadCancellation.Token);
-                    break;
-                }
-                catch (OperationCanceledException) when (!token.IsCancellationRequested)
-                {
-                    if (attempt == maxUploadAttempts)
+
+                    Task<INode> uploadTask = client.UploadFileAsync(
+                        uploadPath, root, progressReporter, uploadCancellation.Token);
+
+                    // The timeout cancels the library's own upload token, then we await
+                    // the task itself. This prevents overlapping uploads and file cleanup
+                    // while MegaApiClient is still reading the ZIP.
+                    using var timeoutRegistration = totalTimeout.Token.Register(() => uploadCancellation.Cancel());
+                    using var idleRegistration = idleTimeout.Token.Register(() => uploadCancellation.Cancel());
+
+                    try
                     {
-                        string reason = idleTimeout.IsCancellationRequested
-                            ? $"No upload progress for {idleTimeoutSeconds} seconds after {maxUploadAttempts} attempts."
-                            : $"MEGA upload exceeded {totalAttemptTimeoutMinutes} minutes per attempt.";
-                        throw new TimeoutException(reason);
+                        uploaded = await uploadTask;
+                    }
+                    catch (OperationCanceledException) when (!token.IsCancellationRequested)
+                    {
+                        if (totalTimeout.IsCancellationRequested)
+                            throw new TimeoutException($"MEGA upload exceeded {totalAttemptTimeoutMinutes} minutes.");
+                        if (idleTimeout.IsCancellationRequested)
+                            throw new TimeoutException($"No MEGA upload progress for {idleTimeoutSeconds} seconds.");
+                        throw;
                     }
 
-                    string retryReason = idleTimeout.IsCancellationRequested
-                        ? $"No upload progress for {idleTimeoutSeconds} seconds"
-                        : $"Upload attempt exceeded {totalAttemptTimeoutMinutes} minutes";
-                    reportProgress(88, $"{retryReason} · retrying {attempt + 1}/{maxUploadAttempts}");
+                    if (uploaded is null)
+                        throw new IOException("MEGA did not return the uploaded file node.");
+
+                    reportProgress(97, "Finalizing MEGA upload");
+                    token.ThrowIfCancellationRequested();
+                    await client.RenameAsync(uploaded, finalName);
+                    if (oldFinal is not null)
+                        await client.DeleteAsync(oldFinal, moveToTrash: false);
+
+                    break;
+                }
+                catch (Exception ex) when (attempt < maxUploadAttempts && !token.IsCancellationRequested)
+                {
+                    lastUploadError = ex;
+                    ScheduledBackupStatusStore.Write(schedule.Id, schedule.Name, true, 88,
+                        $"MEGA upload retry scheduled · attempt {attempt + 1}/{maxUploadAttempts}",
+                        startedAt, 0, uploadedArchiveBytes, 0, attempt + 1, DateTime.Now);
+                    reportProgress(88, $"MEGA upload attempt {attempt} failed: {ex.Message} · retrying {attempt + 1}/{maxUploadAttempts}");
                     await Task.Delay(TimeSpan.FromSeconds(5 * attempt), token);
                 }
-                catch when (attempt < maxUploadAttempts && !token.IsCancellationRequested)
+                catch
                 {
-                    reportProgress(88, $"MEGA upload failed · retrying {attempt + 1}/{maxUploadAttempts}");
-                    await Task.Delay(TimeSpan.FromSeconds(5 * attempt), token);
+                    throw;
+                }
+                finally
+                {
+                    try { await client.LogoutAsync(); } catch { }
                 }
             }
 
             if (uploaded is null)
-                throw new IOException("MEGA upload failed after all retry attempts.");
+                throw new IOException("MEGA upload failed after all retry attempts.", lastUploadError);
 
             reportProgress(97, "Finalizing MEGA upload");
             token.ThrowIfCancellationRequested();
