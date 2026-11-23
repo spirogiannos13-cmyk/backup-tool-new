@@ -23,7 +23,8 @@ public static class BusinessBackupService
         SavedSqlConnection sqlConnection,
         string databaseName,
         string stagingDirectory,
-        CancellationToken token)
+        CancellationToken token,
+        Action<int, string>? progress = null)
     {
         if (!File.Exists(TaxProviderConfig))
             throw new FileNotFoundException("Required configuration file was not found.", TaxProviderConfig);
@@ -38,20 +39,25 @@ public static class BusinessBackupService
         var created = new List<string>();
         long bytes = 0;
 
+        void Report(int step, string label) => progress?.Invoke(step * 100 / 7, label);
         token.ThrowIfCancellationRequested();
+        Report(0, "Exporting Windows printers");
         string printerTarget = Path.Combine(stagingDirectory, PrinterExportFileName);
         await RunStageAsync("Windows printer export (printers.printerExport)", () => ExportWindowsPrintersAsync(printerTarget, token));
         created.Add(printerTarget);
+        Report(1, "Copying tax provider configuration");
         bytes += new FileInfo(printerTarget).Length;
 
         string taxTarget = Path.Combine(stagingDirectory, "appsettings.production.json");
         await RunStageAsync($"Copy configuration file '{TaxProviderConfig}'", () => CopyFileVerifiedAsync(TaxProviderConfig, taxTarget, token));
         created.Add(taxTarget);
+        Report(2, "Copying web service configuration");
         bytes += new FileInfo(taxTarget).Length;
 
         string webTarget = Path.Combine(stagingDirectory, "web.config");
         await RunStageAsync($"Copy web.config '{WebServiceConfig}'", () => CopyFileVerifiedAsync(WebServiceConfig, webTarget, token));
         created.Add(webTarget);
+        Report(3, "Exporting printer registry settings");
         bytes += new FileInfo(webTarget).Length;
 
         foreach (var (registryKey, fileName) in RegistryExports)
@@ -60,14 +66,17 @@ public static class BusinessBackupService
             string target = Path.Combine(stagingDirectory, fileName);
             await RunStageAsync($"Export Registry key '{registryKey}'", () => ExportRegistryKeyAsync(registryKey, target, token));
             created.Add(target);
+            Report(fileName == "printers.reg" ? 4 : 5, "Exporting Registry settings");
             bytes += new FileInfo(target).Length;
         }
 
+        Report(5, "Compressing form_path");
         string formArchive = Path.Combine(stagingDirectory, "form_path.zip");
         await RunStageAsync($"Compress folder '{FormPath}'", () => Task.Run(() => ZipFile.CreateFromDirectory(FormPath, formArchive, CompressionLevel.Optimal, false), token));
         if (!File.Exists(formArchive) || new FileInfo(formArchive).Length == 0)
             throw new IOException("The form_path ZIP archive could not be created or is empty.");
         created.Add(formArchive);
+        Report(6, "Creating compressed SQL database backup");
         bytes += new FileInfo(formArchive).Length;
 
         token.ThrowIfCancellationRequested();
@@ -79,6 +88,7 @@ public static class BusinessBackupService
         created.Add(sqlTarget);
         bytes += new FileInfo(sqlTarget).Length;
 
+        Report(7, "Business backup components prepared");
         return new BusinessBackupResult(bytes, created);
     }
 
