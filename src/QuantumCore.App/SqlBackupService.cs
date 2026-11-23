@@ -43,7 +43,7 @@ public static class SqlBackupService
         string escapedDatabase = databaseName.Replace("]", "]]");
 
         await using (var command = new SqlCommand(
-            $"BACKUP DATABASE [{escapedDatabase}] TO DISK = N'{escapedPath}' WITH COPY_ONLY, INIT, COMPRESSION, CHECKSUM, STATS = 10;", sql))
+            $"BACKUP DATABASE [{escapedDatabase}] TO DISK = N'{escapedPath}' WITH COPY_ONLY, INIT, CHECKSUM, STATS = 10;", sql))
         {
             command.CommandTimeout = 0;
             await command.ExecuteNonQueryAsync(cancellationToken);
@@ -77,12 +77,14 @@ public static class SqlBackupService
             await output.FlushAsync(token);
         }
 
-        var sourceLength = new FileInfo(serverFilePath).Length;
-        var destinationLength = new FileInfo(destinationPath).Length;
-        if (sourceLength != destinationLength)
+        await using var sourceHashStream = new FileStream(serverFilePath, FileMode.Open, FileAccess.Read, FileShare.Read, 1024 * 1024, true);
+        await using var destinationHashStream = new FileStream(destinationPath, FileMode.Open, FileAccess.Read, FileShare.Read, 1024 * 1024, true);
+        byte[] sourceHash = await System.Security.Cryptography.SHA256.HashDataAsync(sourceHashStream, token);
+        byte[] destinationHash = await System.Security.Cryptography.SHA256.HashDataAsync(destinationHashStream, token);
+        if (!System.Security.Cryptography.CryptographicOperations.FixedTimeEquals(sourceHash, destinationHash))
         {
             File.Delete(destinationPath);
-            throw new IOException("The SQL .bak file could not be copied completely. Backup is marked as failed.");
+            throw new IOException("The SQL .bak file failed the integrity check after copying. Backup is marked as failed.");
         }
 
         try { File.Delete(serverFilePath); } catch { /* The completed local copy is valid; leave server-side cleanup for an administrator. */ }
