@@ -93,7 +93,7 @@ public partial class MainWindow : Window
         ScheduleDetailText.Text = $"{upcoming.Schedule.Frequency} · {upcoming.Schedule.Time} · {upcoming.Schedule.DatabaseName} · {upcoming.Schedule.DestinationType}";
         if (currentBackupRunning && activeStatus?.ScheduleId == upcoming.Schedule.Id)
         {
-            ScheduleCountdownText.Text = "AFTER CURRENT BACKUP";
+            ScheduleCountdownText.Text = "BACKUP IS RUNNING";
             ScheduleDetailText.Text = $"{upcoming.Schedule.Frequency} · {upcoming.Schedule.Time} · {upcoming.Schedule.DatabaseName} · {upcoming.Schedule.DestinationType} · Countdown starts after completion";
             return;
         }
