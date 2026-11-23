@@ -1,0 +1,55 @@
+name: Publish Quantum Core for Windows
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+      - build/windows-self-contained-exe
+  pull_request:
+    paths:
+      - "src/QuantumCore.App/**"
+      - ".github/workflows/publish-windows.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Install .NET 10 SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Restore
+        run: dotnet restore src/QuantumCore.App/QuantumCore.App.csproj
+
+      - name: Publish self-contained Windows x64 EXE
+        run: >-
+          dotnet publish src/QuantumCore.App/QuantumCore.App.csproj
+          --configuration Release
+          --runtime win-x64
+          --self-contained true
+          --output ./publish/win-x64
+          -p:PublishSingleFile=true
+          -p:IncludeNativeLibrariesForSelfExtract=true
+          -p:EnableCompressionInSingleFile=true
+          -p:DebugType=None
+          -p:DebugSymbols=false
+
+      - name: Package publish output
+        shell: pwsh
+        run: Compress-Archive -Path ./publish/win-x64/* -DestinationPath ./QuantumCore-Windows-x64.zip -Force
+
+      - name: Upload Windows build
+        uses: actions/upload-artifact@v4
+        with:
+          name: QuantumCore-Windows-x64
+          path: QuantumCore-Windows-x64.zip
+          if-no-files-found: error
+          retention-days: 14
