@@ -17,14 +17,18 @@ public static class ScheduledBackupRunner
         BackupSchedule? schedule = null;
         DateTime started = DateTime.Now;
         var history = new ScheduledBackupHistoryEntry { ScheduleId = scheduleId, StartedAt = started };
+        ScheduledBackupStatusStore.Write(scheduleId, schedule?.Name ?? "Starting", true, 2, "Initializing scheduled backup", started);
         try
         {
             schedule = ScheduleStore.Load().FirstOrDefault(s => s.Id == scheduleId)
                 ?? throw new InvalidOperationException("Scheduled backup definition was not found.");
             history.ScheduleName = schedule.Name;
+            ScheduledBackupStatusStore.Write(scheduleId, schedule.Name, true, 5, "Preparing backup", started);
             Log($"Starting full Business Backup '{schedule.Name}'.");
 
-            long bytes = await BusinessBackupExecutionService.RunAsync(schedule, CancellationToken.None);
+            long bytes = await BusinessBackupExecutionService.RunAsync(schedule, (percent, stage) =>
+                ScheduledBackupStatusStore.Write(scheduleId, schedule.Name, true, percent, stage, started), CancellationToken.None);
+            ScheduledBackupStatusStore.Write(scheduleId, schedule.Name, true, 100, "Completed successfully", started);
             history.Success = true;
             history.BytesWritten = bytes;
             history.Destination = "MEGA:/QuantumCore_Backup.zip";
@@ -33,6 +37,7 @@ public static class ScheduledBackupRunner
         }
         catch (Exception ex)
         {
+            ScheduledBackupStatusStore.Write(scheduleId, schedule?.Name ?? "Scheduled backup", false, 0, "Failed: " + ex.Message, started);
             history.Success = false;
             history.Message = ex.ToString();
             Log("FAILED: " + ex);
@@ -58,7 +63,7 @@ public static class ScheduledBackupRunner
 
 public static class BusinessBackupExecutionService
 {
-    public static async Task<long> RunAsync(BackupSchedule schedule, CancellationToken token)
+    public static async Task<long> RunAsync(BackupSchedule schedule, Action<int, string> reportProgress, CancellationToken token)
     {
         if (!schedule.BackupProfile.Equals("Business", StringComparison.OrdinalIgnoreCase))
             throw new InvalidOperationException("This scheduled task is not configured for the full Business Backup profile.");
@@ -78,14 +83,18 @@ public static class BusinessBackupExecutionService
         try
         {
             Directory.CreateDirectory(staging);
-            var result = await BusinessBackupService.BuildAsync(sqlConnection, schedule.DatabaseName, staging, token);
+            var result = await BusinessBackupService.BuildAsync(sqlConnection, schedule.DatabaseName, staging, token,
+                (percent, stage) => reportProgress(10 + (int)(percent * 0.62), stage));
             token.ThrowIfCancellationRequested();
 
+            reportProgress(75, "Compressing full backup package");
             await Task.Run(() => ZipFile.CreateFromDirectory(staging, archive, CompressionLevel.Optimal, false), token);
+            reportProgress(82, "Backup package compressed");
             if (!File.Exists(archive) || new FileInfo(archive).Length == 0)
                 throw new IOException("The scheduled Business Backup ZIP is missing or empty.");
 
             long uploadedArchiveBytes = new FileInfo(archive).Length;
+            reportProgress(84, "Connecting to MEGA Cloud");
             var client = new MegaApiClient();
             await client.LoginAsync(account.ToToken()).WaitAsync(TimeSpan.FromSeconds(45), token);
             var root = client.GetNodes().Single(n => n.Type == NodeType.Root);
@@ -102,12 +111,15 @@ public static class BusinessBackupExecutionService
             File.Move(archive, uploadPath);
             archive = uploadPath;
 
+            reportProgress(88, "Uploading backup to MEGA Cloud");
             INode uploaded = await client.UploadFileAsync(uploadPath, root, null, token);
+            reportProgress(97, "Finalizing MEGA upload");
             token.ThrowIfCancellationRequested();
             await client.RenameAsync(uploaded, finalName);
             if (oldFinal is not null)
                 await client.DeleteAsync(oldFinal, moveToTrash: false);
 
+            reportProgress(100, "Upload completed");
             return uploadedArchiveBytes;
         }
         finally
