@@ -263,12 +263,6 @@ public static class BusinessBackupExecutionService
             if (uploaded is null)
                 throw new IOException("MEGA upload failed after all retry attempts.", lastUploadError);
 
-            reportProgress(97, "Finalizing MEGA upload");
-            token.ThrowIfCancellationRequested();
-            await client.RenameAsync(uploaded, finalName);
-            if (oldFinal is not null)
-                await client.DeleteAsync(oldFinal, moveToTrash: false);
-
             reportProgress(100, "Upload completed");
             return uploadedArchiveBytes;
         }
