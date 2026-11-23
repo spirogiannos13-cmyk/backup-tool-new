@@ -71,9 +71,11 @@ public static class BusinessBackupService
         bytes += new FileInfo(formArchive).Length;
 
         token.ThrowIfCancellationRequested();
-        string sqlServerBackup = await RunStageAsync($"Create SQL backup for database '{databaseName}'", () => SqlBackupService.CreateBackupAsync(sqlConnection, databaseName, token));
         string sqlTarget = Path.Combine(stagingDirectory, "database.bak");
-        await RunStageAsync($"Copy SQL backup from '{sqlServerBackup}'", () => SqlBackupService.CopyAndCleanupAsync(sqlServerBackup, sqlTarget, token));
+        string sqlServerBackup = await RunStageAsync($"Create SQL backup for database '{databaseName}'",
+            () => SqlBackupService.CreateBackupAsync(sqlConnection, databaseName, stagingDirectory, token));
+        if (!Path.GetFullPath(sqlServerBackup).Equals(Path.GetFullPath(sqlTarget), StringComparison.OrdinalIgnoreCase))
+            await RunStageAsync($"Copy SQL backup from '{sqlServerBackup}'", () => SqlBackupService.CopyAndCleanupAsync(sqlServerBackup, sqlTarget, token));
         created.Add(sqlTarget);
         bytes += new FileInfo(sqlTarget).Length;
 
