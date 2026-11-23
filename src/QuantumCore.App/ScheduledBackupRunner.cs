@@ -28,7 +28,7 @@ public static class ScheduledBackupRunner
             history.Success = true;
             history.BytesWritten = bytes;
             history.Destination = "MEGA:/QuantumCore_Backup.zip";
-            history.Message = $"Completed successfully. Business backup payload: {FormatBytes(bytes)}.";
+            history.Message = $"Completed successfully. Compressed ZIP uploaded to MEGA: {FormatBytes(bytes)}.";
             Log(history.Message);
         }
         catch (Exception ex)
