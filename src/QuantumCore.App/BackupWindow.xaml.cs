@@ -126,12 +126,12 @@ public partial class BackupWindow : Window
         try
         {
             string backupName = "QuantumCore_Backup";
-            // SQL Server runs under its own Windows service identity and normally cannot
-            // write to the signed-in user's AppData\Local\Temp. Use the known SQL-writable
-            // local folder for MEGA staging; the folder is temporary and is removed after upload.
-            string stagingParent = useMega ? @"C:\database" : DestinationBox.Text;
-            if (useMega && !Directory.Exists(stagingParent))
-                throw new DirectoryNotFoundException($"The local staging folder required before MEGA upload does not exist: {stagingParent}");
+            // MEGA staging lives beside SQL Server's backup directory, whose existing
+            // ACLs permit the SQL service to create database.bak. No fixed C:\database
+            // dependency and no broad permission changes are needed.
+            string stagingParent = useMega
+                ? await SqlBackupService.GetBackupStagingParentAsync(sqlConnection, _cancellation.Token)
+                : DestinationBox.Text;
             staging = Path.Combine(stagingParent, ".QuantumCore_Staging_" + Guid.NewGuid().ToString("N"));
             StatusText.Text = "Exporting Windows printers and checking required backup sources…";
             BackupProgress.IsIndeterminate = true;

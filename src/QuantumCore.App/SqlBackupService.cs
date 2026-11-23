@@ -4,6 +4,34 @@ namespace QuantumCore.App;
 
 public static class SqlBackupService
 {
+    public static async Task<string> GetBackupStagingParentAsync(
+        SavedSqlConnection connection, CancellationToken cancellationToken)
+    {
+        await using var sql = new SqlConnection(connection.GetConnectionString("master"));
+        await sql.OpenAsync(cancellationToken);
+
+        await using var command = new SqlCommand(
+            "SELECT CAST(SERVERPROPERTY('InstanceDefaultBackupPath') AS nvarchar(4000));", sql);
+        command.CommandTimeout = 15;
+        string? defaultDirectory = await command.ExecuteScalarAsync(cancellationToken) as string;
+
+        if (IsLocalServer(connection.Server))
+        {
+            if (string.IsNullOrWhiteSpace(defaultDirectory) || !Directory.Exists(defaultDirectory))
+                throw new DirectoryNotFoundException(
+                    $"SQL Server's configured backup directory is unavailable: {defaultDirectory ?? "(not configured)"}");
+            return defaultDirectory;
+        }
+
+        string remoteDirectory = connection.BackupDirectory.Trim();
+        if (string.IsNullOrWhiteSpace(remoteDirectory) || !remoteDirectory.StartsWith(@"\\", StringComparison.Ordinal))
+            throw new InvalidOperationException(
+                "For MEGA backups from a remote SQL Server, configure a UNC backup share accessible to both SQL Server and this PC.");
+        if (!Directory.Exists(remoteDirectory))
+            throw new DirectoryNotFoundException($"The configured SQL backup share is not accessible: {remoteDirectory}");
+        return remoteDirectory;
+    }
+
     public static async Task<string> CreateBackupAsync(
         SavedSqlConnection connection, string databaseName, string localDestinationDirectory, CancellationToken cancellationToken)
     {
