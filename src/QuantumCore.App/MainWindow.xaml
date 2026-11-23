@@ -81,6 +81,11 @@
             <DoubleAnimation Storyboard.TargetName="CoreRing" Storyboard.TargetProperty="Opacity" From="0.42" To="1" Duration="0:0:2.2"/>
             <DoubleAnimation Storyboard.TargetName="CoreAura" Storyboard.TargetProperty="Opacity" From="0.25" To="0.75" Duration="0:0:3.2"/>
         </Storyboard>
+        <Storyboard x:Key="CoreActivePulse" RepeatBehavior="Forever" AutoReverse="True">
+            <DoubleAnimation Storyboard.TargetName="CoreGlow" Storyboard.TargetProperty="Opacity" From="0.48" To="1" Duration="0:0:0.75"/>
+            <DoubleAnimation Storyboard.TargetName="CoreRing" Storyboard.TargetProperty="Opacity" From="0.62" To="1" Duration="0:0:0.65"/>
+            <DoubleAnimation Storyboard.TargetName="CoreAura" Storyboard.TargetProperty="Opacity" From="0.42" To="1" Duration="0:0:0.9"/>
+        </Storyboard>
         <Storyboard x:Key="CoreRotate" RepeatBehavior="Forever">
             <DoubleAnimation Storyboard.TargetName="CoreRing" Storyboard.TargetProperty="(UIElement.RenderTransform).(RotateTransform.Angle)" From="0" To="360" Duration="0:0:24"/>
             <DoubleAnimation Storyboard.TargetName="CoreOrbit" Storyboard.TargetProperty="(UIElement.RenderTransform).(RotateTransform.Angle)" From="360" To="0" Duration="0:0:18"/>
@@ -387,7 +392,6 @@
         </Canvas>
     </Grid>
     <Window.Triggers>
-        <EventTrigger RoutedEvent="Loaded"><BeginStoryboard Storyboard="{StaticResource CorePulse}"/></EventTrigger>
         <EventTrigger RoutedEvent="Loaded"><BeginStoryboard Storyboard="{StaticResource CoreRotate}"/></EventTrigger>
         <EventTrigger RoutedEvent="Loaded"><BeginStoryboard Storyboard="{StaticResource ScanlineSweep}"/></EventTrigger>
     </Window.Triggers>
