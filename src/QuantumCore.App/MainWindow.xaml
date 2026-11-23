@@ -196,6 +196,7 @@
                                             <TextBlock x:Name="BackupPercentText" Text="0%" FontSize="11" Foreground="#55DDF7" HorizontalAlignment="Right"/>
                                         </Grid>
                                         <TextBlock x:Name="BackupStageText" Text="Waiting for scheduled operation" FontSize="10" Foreground="#7894B2" Margin="0,5,0,0" TextWrapping="Wrap"/>
+                                        <TextBlock x:Name="UploadDetailsText" Text="" FontSize="10" Foreground="#8CA7C5" Margin="0,4,0,0" TextWrapping="Wrap"/>
                                     </StackPanel>
                                 </Grid>
                             </Border>
