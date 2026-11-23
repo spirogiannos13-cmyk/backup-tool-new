@@ -167,14 +167,13 @@ public static class BusinessBackupExecutionService
             {
                 token.ThrowIfCancellationRequested();
 
-                // Use a fresh client for every attempt. Never start a retry until the
-                // previous UploadFileAsync task has actually completed after cancellation.
+                // A new client per attempt prevents a failed connection/session from
+                // contaminating subsequent retries.
                 var client = new MegaApiClient();
                 using var totalTimeout = new CancellationTokenSource(TimeSpan.FromMinutes(totalAttemptTimeoutMinutes));
                 using var idleTimeout = new CancellationTokenSource(TimeSpan.FromSeconds(idleTimeoutSeconds));
                 using var uploadCancellation = CancellationTokenSource.CreateLinkedTokenSource(
                     token, totalTimeout.Token, idleTimeout.Token);
-
                 using var idleRegistration = idleTimeout.Token.Register(() => uploadCancellation.Cancel());
                 using var timeoutRegistration = totalTimeout.Token.Register(() => uploadCancellation.Cancel());
 
@@ -214,9 +213,8 @@ public static class BusinessBackupExecutionService
                     Task<INode> uploadTask = client.UploadFileAsync(
                         uploadPath, root, progressReporter, uploadCancellation.Token);
 
-                    // The timeout cancels the library's own upload token, then we await
-                    // the task itself. This prevents overlapping uploads and file cleanup
-                    // while MegaApiClient is still reading the ZIP.
+                    // Await the library task itself after cancellation; do not launch a
+                    // second upload or delete the source ZIP while the first still reads it.
                     try
                     {
                         uploaded = await uploadTask;
@@ -247,12 +245,9 @@ public static class BusinessBackupExecutionService
                     ScheduledBackupStatusStore.Write(schedule.Id, schedule.Name, true, 88,
                         $"MEGA upload retry scheduled · attempt {attempt + 1}/{maxUploadAttempts}",
                         startedAt, 0, uploadedArchiveBytes, 0, attempt + 1, DateTime.Now);
-                    reportProgress(88, $"MEGA upload attempt {attempt} failed: {ex.Message} · retrying {attempt + 1}/{maxUploadAttempts}");
+                    reportProgress(88,
+                        $"MEGA upload attempt {attempt} failed: {ex.Message} · retrying {attempt + 1}/{maxUploadAttempts}");
                     await Task.Delay(TimeSpan.FromSeconds(5 * attempt), token);
-                }
-                catch
-                {
-                    throw;
                 }
                 finally
                 {
