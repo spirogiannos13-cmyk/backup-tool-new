@@ -186,13 +186,13 @@ public partial class BackupWindow : Window
                     });
                     string uploadPath = Path.Combine(Path.GetDirectoryName(archive)!, uploadTempName);
                     File.Move(archive, uploadPath, overwrite: true);
+                    archive = uploadPath;
                     INode uploadedNode = await client.UploadFileAsync(uploadPath, root, progress, _cancellation.Token);
                     _cancellation.Token.ThrowIfCancellationRequested();
+                    INode promotedNode = await client.RenameAsync(uploadedNode, finalRemoteName);
                     if (existingFinal is not null)
                         await client.DeleteAsync(existingFinal, moveToTrash: false);
-                    await client.RenameAsync(uploadedNode, finalRemoteName);
-                    CreatedBackupPath = "MEGA:/" + finalRemoteName;
-                    archive = uploadPath;
+                    CreatedBackupPath = "MEGA:/" + promotedNode.Name;
                 }
                 finally
                 {
