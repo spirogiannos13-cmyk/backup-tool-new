@@ -171,7 +171,7 @@
                         <Grid Margin="0,0,0,18">
                             <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="*"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
                             <Border Grid.Column="0" Style="{StaticResource PanelCard}" Margin="0,0,10,0">
-                                <StackPanel><TextBlock Text="BACKUPS THIS SESSION" Foreground="#8CA7C5" FontSize="10"/>
+                                <StackPanel><TextBlock Text="TOTAL COMPLETED BACKUPS" Foreground="#8CA7C5" FontSize="10"/>
                                     <TextBlock x:Name="TotalBackupsValue" Text="0" FontSize="30" FontWeight="Light" Margin="0,7,0,1"/>
                                     <TextBlock x:Name="TotalBackupsCaption" Text="No new backups yet" FontSize="10" Foreground="#6886A5"/></StackPanel>
                             </Border>

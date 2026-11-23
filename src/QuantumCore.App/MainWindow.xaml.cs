@@ -7,7 +7,6 @@ namespace QuantumCore.App;
 
 public partial class MainWindow : Window
 {
-    private int _backupCount;
     private readonly DispatcherTimer _dashboardTimer = new() { Interval = TimeSpan.FromSeconds(1) };
     private readonly DispatcherTimer _systemTimer = new() { Interval = TimeSpan.FromSeconds(15) };
     private bool _refreshingSystem;
@@ -46,6 +45,7 @@ public partial class MainWindow : Window
 
     private void RefreshBackupDashboard()
     {
+        RefreshBackupSummary();
         var status = ScheduledBackupStatusStore.Load();
         SetCoreActivity(status?.IsRunning == true && status.UpdatedAt > DateTime.Now.AddHours(-24));
         if (status is not null && status.UpdatedAt > DateTime.Now.AddHours(-24))
@@ -126,6 +126,48 @@ public partial class MainWindow : Window
             activePulse.Begin(this, true);
         else
             idlePulse.Begin(this, true);
+    }
+
+    private void RefreshBackupSummary()
+    {
+        var entries = ScheduledBackupHistoryStore.Load()
+            .OrderByDescending(entry => entry.FinishedAt)
+            .ToList();
+
+        var successful = entries.Where(entry => entry.Success).ToList();
+        TotalBackupsValue.Text = successful.Count.ToString();
+        TotalBackupsCaption.Text = "Successful backups · all sessions";
+
+        var latestSuccessful = successful.FirstOrDefault();
+        LastBackupValue.Text = latestSuccessful is null || latestSuccessful.BytesWritten <= 0
+            ? "—"
+            : FormatBytes(latestSuccessful.BytesWritten);
+        if (latestSuccessful is not null)
+            LastBackupValue.ToolTip = latestSuccessful.Destination;
+        else
+            LastBackupValue.ClearValue(FrameworkElement.ToolTipProperty);
+
+        var latestOperation = entries.FirstOrDefault();
+        if (latestOperation is null)
+        {
+            LastBackupTimeValue.Text = "—";
+            LastBackupCaption.Text = "No operations recorded";
+            return;
+        }
+
+        DateTime operationTime = latestOperation.FinishedAt == default
+            ? latestOperation.StartedAt
+            : latestOperation.FinishedAt;
+        LastBackupTimeValue.Text = operationTime.ToString("dd/MM HH:mm");
+        LastBackupCaption.Text = latestOperation.Success
+            ? "Latest operation · completed successfully"
+            : "Latest operation · failed";
+        LastBackupCaption.Foreground = latestOperation.Success
+            ? System.Windows.Media.Brushes.LightGreen
+            : System.Windows.Media.Brushes.Orange;
+
+        ActivityTitle.Text = latestOperation.ScheduleName;
+        ActivityDescription.Text = $"{(latestOperation.Success ? "Completed successfully" : "Failed")} · {operationTime:dd/MM/yyyy HH:mm}";
     }
 
     private void RefreshScheduleCountdown()
@@ -272,16 +314,7 @@ public partial class MainWindow : Window
     {
         var dialog = new BackupWindow { Owner = this };
         if (dialog.ShowDialog() == true)
-        {
-            _backupCount++;
-            TotalBackupsValue.Text = _backupCount.ToString();
-            TotalBackupsCaption.Text = "Backup created this session";
-            LastBackupValue.Text = FormatBytes(dialog.BytesCopied);
-            LastBackupTimeValue.Text = DateTime.Now.ToString("HH:mm");
-            LastBackupCaption.Text = "Latest operation completed";
-            ActivityTitle.Text = "Backup completed";
-            ActivityDescription.Text = $"Saved {FormatBytes(dialog.BytesCopied)} to {dialog.CreatedBackupPath}";
-        }
+            RefreshBackupSummary();
     }
 
     private void SqlConnections_Click(object sender, RoutedEventArgs e)
