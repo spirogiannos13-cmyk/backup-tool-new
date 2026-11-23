@@ -248,8 +248,10 @@
                             </StackPanel>
                         </Border>
                         <Border Style="{StaticResource PanelCard}" Margin="0,14,0,0">
+                            <StackPanel>
                             <TextBlock Style="{StaticResource SectionTitle}" Text="REQUIREMENTS"/>
                             <TextBlock Text="Windows must be signed in, the computer awake and connected to the Internet. SQL and MEGA credentials must be saved for unattended runs." Foreground="#8CA7C5" TextWrapping="Wrap" Margin="0,8,0,0"/>
+                            </StackPanel>
                         </Border>
                     </StackPanel>
                 </ScrollViewer>
@@ -266,9 +268,11 @@
                             </StackPanel>
                         </Border>
                         <Border Style="{StaticResource PanelCard}" Margin="0,14,0,0">
+                            <StackPanel>
                             <TextBlock Style="{StaticResource SectionTitle}" Text="LOG FILE LOCATION"/>
                             <TextBlock Text="%LOCALAPPDATA%\QuantumCore\scheduled-backups.log" Foreground="#55DDF7" TextWrapping="Wrap" Margin="0,8,0,0"/>
                             <TextBlock Text="History data: scheduled-backup-history.json" Foreground="#8CA7C5" Margin="0,5,0,0"/>
+                            </StackPanel>
                         </Border>
                     </StackPanel>
                 </ScrollViewer>
