@@ -53,6 +53,7 @@ public partial class SqlConnectionManagerWindow : Window
         _activeConnection = connection;
         NameBox.Text = connection.Name;
         ServerBox.Text = connection.Server;
+        BackupDirectoryBox.Text = connection.BackupDirectory;
         AuthenticationCombo.SelectedIndex = connection.UseWindowsAuthentication ? 0 : 1;
         UsernameBox.Text = connection.Username;
         PasswordBox.Password = "";
@@ -69,6 +70,7 @@ public partial class SqlConnectionManagerWindow : Window
         _activeConnection = null;
         NameBox.Text = "";
         ServerBox.Text = "";
+        BackupDirectoryBox.Text = "";
         AuthenticationCombo.SelectedIndex = 0;
         UsernameBox.Text = "";
         PasswordBox.Password = "";
@@ -206,6 +208,7 @@ public partial class SqlConnectionManagerWindow : Window
             Id = _activeConnection?.Id ?? Guid.NewGuid().ToString("N"),
             Name = name,
             Server = server,
+            BackupDirectory = BackupDirectoryBox.Text.Trim(),
             UseWindowsAuthentication = windowsAuth,
             Username = windowsAuth ? "" : username,
             ProtectedPassword = protectedPassword
