@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.IO.Compression;
+using System.ComponentModel;
 
 namespace QuantumCore.App;
 
@@ -10,6 +11,7 @@ public static class BusinessBackupService
     private const string TaxProviderConfig = @"C:\Program Files (x86)\Sunsoft Ltd\ExternalTaxProvider\External.Tax.Provider\appsettings.production.json";
     private const string WebServiceConfig = @"C:\Program Files (x86)\Sunsoft Ltd\AmvrosiaWebService\Amvrosia.Web.Service\web.config";
     private const string FormPath = @"C:\form_path";
+    private const string PrinterExportFileName = "printers.printerExport";
 
     private static readonly (string RegistryKey, string FileName)[] RegistryExports =
     [
@@ -18,14 +20,11 @@ public static class BusinessBackupService
     ];
 
     public static async Task<BusinessBackupResult> BuildAsync(
-        string printerExportPath,
         SavedSqlConnection sqlConnection,
         string databaseName,
         string stagingDirectory,
         CancellationToken token)
     {
-        if (string.IsNullOrWhiteSpace(printerExportPath) || !File.Exists(printerExportPath))
-            throw new FileNotFoundException("The required printer export file was not found. Select the printers.printerExport file before starting.", printerExportPath);
         if (!File.Exists(TaxProviderConfig))
             throw new FileNotFoundException("Required configuration file was not found.", TaxProviderConfig);
         if (!File.Exists(WebServiceConfig))
@@ -40,8 +39,8 @@ public static class BusinessBackupService
         long bytes = 0;
 
         token.ThrowIfCancellationRequested();
-        string printerTarget = Path.Combine(stagingDirectory, "printers.printerExport");
-        await CopyFileVerifiedAsync(printerExportPath, printerTarget, token);
+        string printerTarget = Path.Combine(stagingDirectory, PrinterExportFileName);
+        await ExportWindowsPrintersAsync(printerTarget, token);
         created.Add(printerTarget);
         bytes += new FileInfo(printerTarget).Length;
 
@@ -79,6 +78,53 @@ public static class BusinessBackupService
         bytes += new FileInfo(sqlTarget).Length;
 
         return new BusinessBackupResult(bytes, created);
+    }
+
+    private static async Task ExportWindowsPrintersAsync(string targetPath, CancellationToken token)
+    {
+        string windows = Environment.GetFolderPath(Environment.SpecialFolder.Windows);
+        string printBrmPath = Path.Combine(windows, "System32", "spool", "tools", "PrintBrm.exe");
+        if (!File.Exists(printBrmPath) && Environment.Is64BitOperatingSystem && !Environment.Is64BitProcess)
+            printBrmPath = Path.Combine(windows, "Sysnative", "spool", "tools", "PrintBrm.exe");
+
+        if (!File.Exists(printBrmPath))
+            throw new FileNotFoundException(
+                "Windows PrintBRM was not found. Enable the Print and Document Services / Print Management feature, then try again.",
+                printBrmPath);
+
+        var start = new ProcessStartInfo(printBrmPath)
+        {
+            UseShellExecute = true,
+            Verb = "runas",
+            WorkingDirectory = Path.GetDirectoryName(targetPath)!
+        };
+        start.ArgumentList.Add("-b");
+        start.ArgumentList.Add("-f");
+        start.ArgumentList.Add(targetPath);
+
+        using var process = new Process { StartInfo = start };
+        try
+        {
+            if (!process.Start())
+                throw new InvalidOperationException("Windows PrintBRM could not be started.");
+            await process.WaitForExitAsync(token);
+        }
+        catch (Win32Exception ex) when (ex.NativeErrorCode == 1223)
+        {
+            throw new OperationCanceledException(
+                "Printer export requires Windows administrator approval. The UAC permission request was declined.", ex, token);
+        }
+        catch
+        {
+            try { if (!process.HasExited) process.Kill(entireProcessTree: true); } catch { }
+            throw;
+        }
+
+        if (process.ExitCode != 0 || !File.Exists(targetPath) || new FileInfo(targetPath).Length == 0)
+            throw new InvalidOperationException(
+                $"Windows PrintBRM could not export printers (exit code {process.ExitCode}). Run Quantum Core with an administrator account and verify that Windows Print Management is available.");
+
+        token.ThrowIfCancellationRequested();
     }
 
     private static async Task ExportRegistryKeyAsync(string registryKey, string targetPath, CancellationToken token)

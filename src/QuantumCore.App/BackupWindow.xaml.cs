@@ -86,26 +86,8 @@ public partial class BackupWindow : Window
                 : "Choose a local folder. Source files are copied; originals are never modified.";
     }
 
-    private void BrowsePrinterExport_Click(object sender, RoutedEventArgs e)
-    {
-        var dialog = new OpenFileDialog
-        {
-            Title = "Select printer export file",
-            Filter = "Printer export (*.printerExport)|*.printerExport|All files (*.*)|*.*",
-            Multiselect = false
-        };
-        if (dialog.ShowDialog(this) == true) PrinterExportBox.Text = dialog.FileName;
-    }
-
     private async void StartBusinessBackup_Click(object sender, RoutedEventArgs e)
     {
-        if (string.IsNullOrWhiteSpace(PrinterExportBox.Text) || !File.Exists(PrinterExportBox.Text))
-        {
-            MessageBox.Show(this, "Select the required printers.printerExport file first.", "Printer export required",
-                MessageBoxButton.OK, MessageBoxImage.Warning);
-            return;
-        }
-
         if (SqlConnectionCombo.SelectedItem is not SavedSqlConnection sqlConnection
             || SqlDatabaseCombo.SelectedItem is not string databaseName)
         {
@@ -146,10 +128,10 @@ public partial class BackupWindow : Window
             string backupName = "QuantumCore_Backup";
             string stagingParent = useMega ? Path.GetTempPath() : DestinationBox.Text;
             staging = Path.Combine(stagingParent, ".QuantumCore_Staging_" + Guid.NewGuid().ToString("N"));
-            StatusText.Text = "Checking required backup sources…";
+            StatusText.Text = "Exporting Windows printers and checking required backup sources…";
             BackupProgress.IsIndeterminate = true;
             var result = await BusinessBackupService.BuildAsync(
-                PrinterExportBox.Text.Trim(), sqlConnection, databaseName, staging, _cancellation.Token);
+                sqlConnection, databaseName, staging, _cancellation.Token);
 
             _cancellation.Token.ThrowIfCancellationRequested();
             if (useMega)
