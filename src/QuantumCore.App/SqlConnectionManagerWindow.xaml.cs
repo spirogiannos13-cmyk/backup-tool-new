@@ -57,7 +57,7 @@ public partial class SqlConnectionManagerWindow : Window
         AuthenticationCombo.SelectedIndex = connection.UseWindowsAuthentication ? 0 : 1;
         UsernameBox.Text = connection.Username;
         PasswordBox.Password = "";
-        DatabasesList.Items.Clear();
+        DatabasesList.ItemsSource = null;
         DatabaseStatusText.Text = "Test the connection to load databases.";
         StatusText.Text = "Saved connection selected. Re-enter its password to edit SQL authentication details.";
     }
