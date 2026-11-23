@@ -9,6 +9,8 @@ public sealed class SystemMonitorSnapshot
     public string Disk { get; init; } = "Unavailable";
     public string Windows { get; init; } = Environment.OSVersion.VersionString;
     public string Temperature { get; init; } = "Not reported by hardware";
+    public double MemoryPercent { get; init; }
+    public double DiskPercent { get; init; }
 }
 
 public static class SystemMonitorService
@@ -19,6 +21,7 @@ public static class SystemMonitorService
     {
         string cpu = "Unavailable", memory = "Unavailable", disk = "Unavailable";
         string temperature = "Not reported by hardware";
+        double memoryPercent = 0, diskPercent = 0;
         string windows = Environment.OSVersion.VersionString;
 
         try
@@ -39,6 +42,7 @@ public static class SystemMonitorService
             {
                 double total = Convert.ToDouble(item["TotalVisibleMemorySize"]) / 1024d / 1024d;
                 double free = Convert.ToDouble(item["FreePhysicalMemory"]) / 1024d / 1024d;
+                memoryPercent = total > 0 ? Math.Clamp((total - free) / total * 100d, 0, 100) : 0;
                 memory = $"{total - free:0.0} / {total:0.0} GB used";
                 windows = item["Caption"]?.ToString() ?? windows;
                 break;
@@ -56,6 +60,8 @@ public static class SystemMonitorService
                 double free = Convert.ToDouble(item["FreeSpace"]) / 1024d / 1024d / 1024d;
                 double total = Convert.ToDouble(item["Size"]) / 1024d / 1024d / 1024d;
                 drives.Add($"{item["DeviceID"]}  {free:0.0} GB free / {total:0.0} GB");
+                if (item["DeviceID"]?.ToString()?.Equals("C:", StringComparison.OrdinalIgnoreCase) == true)
+                    diskPercent = total > 0 ? Math.Clamp((total - free) / total * 100d, 0, 100) : 0;
             }
             if (drives.Count > 0) disk = string.Join("     •     ", drives);
         }
@@ -77,6 +83,6 @@ public static class SystemMonitorService
         }
         catch { }
 
-        return new SystemMonitorSnapshot { Cpu = cpu, Memory = memory, Disk = disk, Windows = windows, Temperature = temperature };
+        return new SystemMonitorSnapshot { Cpu = cpu, Memory = memory, Disk = disk, Windows = windows, Temperature = temperature, MemoryPercent = memoryPercent, DiskPercent = diskPercent };
     }
 }
