@@ -27,7 +27,7 @@ public static class RestoreService
         string extracted = Path.Combine(work, "package");
         string formExtract = Path.Combine(work, "form_path");
         string safety = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),
-            "QuantumCore", "PreRestore-" + DateTime.Now.ToString("yyyyMMdd-HHmmss"));
+            "QuantumCore", "PreRestore-" + DateTime.Now.ToString("yyyyMMdd-HHmmss") + "-" + Guid.NewGuid().ToString("N")[..6]);
         Directory.CreateDirectory(extracted);
         Directory.CreateDirectory(formExtract);
         try
@@ -103,6 +103,7 @@ public static class RestoreService
         finally
         {
             try { if (Directory.Exists(work)) Directory.Delete(work, recursive: true); } catch { }
+            try { if (File.Exists(archivePath)) File.Delete(archivePath); } catch { }
         }
     }
 
