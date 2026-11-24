@@ -117,7 +117,7 @@ public partial class SchedulesWindow : Window
         try
         {
             if (existing is null) _schedules.Add(schedule);
-            ScheduleStore.Save(_schedules);
+            SaveStoredSchedules();
             await WindowsTaskScheduler.RegisterAsync(schedule);
             _editingScheduleId = null;
             SaveScheduleButton.Content = "＋  SAVE DAILY SCHEDULE";
@@ -241,6 +241,11 @@ public partial class SchedulesWindow : Window
             StatusText.Text = "Could not read Windows Task Scheduler: " + ex.Message;
             RefreshSchedules();
         }
+    }
+
+    private void SaveStoredSchedules()
+    {
+        ScheduleStore.Save(_schedules.Where(s => !_orphanTaskIds.Contains(s.Id)).ToList());
     }
 
     private void RefreshSchedules()
