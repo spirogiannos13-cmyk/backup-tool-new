@@ -12,6 +12,7 @@ public partial class MainWindow : Window
     private readonly DispatcherTimer _systemTimer = new() { Interval = TimeSpan.FromSeconds(15) };
     private bool _refreshingSystem;
     private bool? _coreActivityState;
+    private ScheduledBackupStatus? _lastKnownScheduledStatus;
     private readonly CancellationTokenSource _uiShutdown = new();
 
     public MainWindow()
@@ -48,7 +49,15 @@ public partial class MainWindow : Window
     private void RefreshBackupDashboard()
     {
         RefreshBackupSummary();
-        var status = ScheduledBackupStatusStore.Load();
+        var loadedStatus = ScheduledBackupStatusStore.Load();
+        if (loadedStatus is not null &&
+            (_lastKnownScheduledStatus is null || loadedStatus.UpdatedAt >= _lastKnownScheduledStatus.UpdatedAt))
+        {
+            _lastKnownScheduledStatus = loadedStatus;
+        }
+
+        // Keep the last valid snapshot if a read lands during the status-file replacement.
+        var status = _lastKnownScheduledStatus;
         SetCoreActivity(status?.IsRunning == true && status.UpdatedAt > DateTime.Now.AddHours(-24));
         if (status is not null && status.UpdatedAt > DateTime.Now.AddHours(-24))
         {
