@@ -49,6 +49,8 @@ public partial class RestoreWindow : Window
         if (PcFoldersList.SelectedItem is not MegaCloudItem folder || _client is null) return;
         try
         {
+            if (_downloadedArchive is not null) { try { File.Delete(_downloadedArchive); } catch { } }
+            _downloadedArchive = null;
             var backup = _client.GetNodes(folder.Node).FirstOrDefault(n =>
                 n.Type == NodeType.File && n.Name.Equals(MegaCloudService.BackupFileName, StringComparison.OrdinalIgnoreCase));
             if (backup is null) throw new FileNotFoundException("This PC folder does not contain QuantumCore_Backup.zip.");
