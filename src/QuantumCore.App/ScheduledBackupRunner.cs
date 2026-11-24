@@ -79,7 +79,7 @@ public static class ScheduledBackupRunner
             history.Success = true;
             history.Status = "SUCCESS";
             history.BytesWritten = bytes;
-            history.Destination = "MEGA:/QuantumCore_Backup.zip";
+            history.Destination = $"MEGA:/{MegaCloudService.GetPcFolderName()}/{MegaCloudService.BackupFileName}";
             history.Message = $"Completed successfully. Compressed ZIP uploaded to MEGA: {FormatBytes(bytes)}.";
             Log(history.Message);
         }
@@ -241,6 +241,36 @@ public static class BusinessBackupExecutionService
                         await client.DeleteAsync(oldFinal, moveToTrash: false);
 
                     break;
+                }
+                catch (Exception ex) when (attempt < maxUploadAttempts && !token.IsCancellationRequested)
+                {
+                    lastUploadError = ex;
+                    ScheduledBackupStatusStore.Write(schedule.Id, schedule.Name, true, 88,
+                        $"MEGA upload retry scheduled · attempt {attempt + 1}/{maxUploadAttempts}",
+                        startedAt, 0, uploadedArchiveBytes, 0, attempt + 1, DateTime.Now);
+                    reportProgress(88,
+                        $"MEGA upload attempt {attempt} failed: {ex.Message} · retrying {attempt + 1}/{maxUploadAttempts}");
+                    await Task.Delay(TimeSpan.FromSeconds(5 * attempt), token);
+                }
+                finally
+                {
+                    try { await client.LogoutAsync(); } catch { }
+                }
+            }
+
+            if (uploaded is null)
+                throw new IOException("MEGA upload failed after all retry attempts.", lastUploadError);
+
+            reportProgress(100, "Upload completed");
+            return uploadedArchiveBytes;
+        }
+        finally
+        {
+            try { if (File.Exists(archive)) File.Delete(archive); } catch { }
+            try { if (Directory.Exists(staging)) Directory.Delete(staging, true); } catch { }
+        }
+    }
+}                    break;
                 }
                 catch (Exception ex) when (attempt < maxUploadAttempts && !token.IsCancellationRequested)
                 {
