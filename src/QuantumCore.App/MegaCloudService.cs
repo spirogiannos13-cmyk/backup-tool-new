@@ -8,10 +8,9 @@ public sealed class MegaCloudItem
     public required string DisplayName { get; init; }
     public required bool IsFolder { get; init; }
     public string SizeDisplay { get; init; } = "—";
-    public string ModifiedDisplay { get; init; } = "—";
     public override string ToString() => IsFolder
         ? $"📁  {DisplayName}"
-        : $"📦  {DisplayName}     {SizeDisplay}     {ModifiedDisplay}";
+        : $"📦  {DisplayName}     {SizeDisplay}";
 }
 
 public static class MegaCloudService
@@ -36,30 +35,31 @@ public static class MegaCloudService
         return folder ?? await client.CreateFolderAsync(folderName, root);
     }
 
-    public static async Task<List<MegaCloudItem>> ListRootFoldersAsync(MegaApiClient client)
+    public static Task<List<MegaCloudItem>> ListRootFoldersAsync(MegaApiClient client)
     {
         var root = client.GetNodes().Single(n => n.Type == NodeType.Root);
-        return client.GetNodes(root)
+        var items = client.GetNodes(root)
             .Where(n => n.Type == NodeType.Directory && n.Name.StartsWith("PC-", StringComparison.OrdinalIgnoreCase))
             .OrderBy(n => n.Name, StringComparer.OrdinalIgnoreCase)
             .Select(n => new MegaCloudItem { Node = n, DisplayName = n.Name, IsFolder = true })
             .ToList();
+        return Task.FromResult(items);
     }
 
-    public static async Task<List<MegaCloudItem>> ListFolderContentsAsync(MegaApiClient client, INode folder)
+    public static Task<List<MegaCloudItem>> ListFolderContentsAsync(MegaApiClient client, INode folder)
     {
-        return client.GetNodes(folder)
+        var items = client.GetNodes(folder)
             .Where(n => n.Type == NodeType.File)
-            .OrderByDescending(n => n.ModificationDate ?? DateTime.MinValue)
+            .OrderBy(n => n.Name, StringComparer.OrdinalIgnoreCase)
             .Select(n => new MegaCloudItem
             {
                 Node = n,
                 DisplayName = n.Name,
                 IsFolder = false,
-                SizeDisplay = FormatBytes(n.Size),
-                ModifiedDisplay = n.ModificationDate?.ToLocalTime().ToString("dd/MM/yyyy HH:mm") ?? "—"
+                SizeDisplay = FormatBytes(n.Size)
             })
             .ToList();
+        return Task.FromResult(items);
     }
 
     public static async Task ReplacePcBackupAsync(MegaApiClient client, string localZipPath,
