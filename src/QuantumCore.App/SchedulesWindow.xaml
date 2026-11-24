@@ -91,7 +91,8 @@
                             <TextBlock Text="Registered with Windows Task Scheduler" Foreground="#8CA7C5" FontSize="11" Margin="0,5,0,0"/>
                         </StackPanel>
                         <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,10,0,0">
-                            <Button Content="Refresh" Click="Refresh_Click"/>\n                            <Button Content="Modify selected" Click="ModifySchedule_Click"/>
+                            <Button Content="Refresh" Click="Refresh_Click"/>
+                            <Button Content="Modify selected" Click="ModifySchedule_Click"/>
                             <Button Content="Remove selected" Click="RemoveSchedule_Click" Margin="0"/>
                         </StackPanel>
                         <ListBox x:Name="SchedulesList" Background="#0A1728" Foreground="#D9EDFF" BorderBrush="#294563" Padding="9" ScrollViewer.HorizontalScrollBarVisibility="Disabled" ScrollViewer.VerticalScrollBarVisibility="Auto">
