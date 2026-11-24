@@ -79,7 +79,7 @@ public static class ScheduledBackupRunner
             history.Success = true;
             history.Status = "SUCCESS";
             history.BytesWritten = bytes;
-            history.Destination = "MEGA:/QuantumCore_Backup.zip";
+            history.Destination = $"MEGA:/{MegaCloudService.GetPcFolderName()}/{MegaCloudService.BackupFileName}";
             history.Message = $"Completed successfully. Compressed ZIP uploaded to MEGA: {FormatBytes(bytes)}.";
             Log(history.Message);
         }
@@ -183,13 +183,13 @@ public static class BusinessBackupExecutionService
                 {
                     reportProgress(84, "Connecting to MEGA Cloud");
                     await client.LoginAsync(account.ToToken()).WaitAsync(TimeSpan.FromSeconds(45), token);
-                    var root = client.GetNodes().Single(n => n.Type == NodeType.Root);
+                    var pcFolder = await MegaCloudService.GetOrCreatePcFolderAsync(client, token);
 
-                    var oldUploading = client.GetNodes(root)
+                    var oldUploading = client.GetNodes(pcFolder)
                         .FirstOrDefault(n => n.Type == NodeType.File && n.Name == uploadingName);
                     if (oldUploading is not null)
                         await client.DeleteAsync(oldUploading, moveToTrash: false);
-                    var oldFinal = client.GetNodes(root)
+                    var oldFinal = client.GetNodes(pcFolder)
                         .FirstOrDefault(n => n.Type == NodeType.File && n.Name == finalName);
 
                     ScheduledBackupStatusStore.Write(schedule.Id, schedule.Name, true, 88,
@@ -214,7 +214,7 @@ public static class BusinessBackupExecutionService
 
                     idleTimeout.CancelAfter(TimeSpan.FromSeconds(idleTimeoutSeconds));
                     Task<INode> uploadTask = client.UploadFileAsync(
-                        uploadPath, root, progressReporter, uploadCancellation.Token);
+                        uploadPath, pcFolder, progressReporter, uploadCancellation.Token);
 
                     // Await the library task itself after cancellation; do not launch a
                     // second upload or delete the source ZIP while the first still reads it.
