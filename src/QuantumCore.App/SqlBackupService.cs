@@ -135,17 +135,20 @@ public static class SqlBackupService
     {
         string destinationDirectory = Path.GetDirectoryName(destinationPath)!;
         Directory.CreateDirectory(destinationDirectory);
-        string stagingPath = destinationPath + ".partial";
+        // Use a unique temporary name so stale files or concurrent antivirus scans
+        // cannot collide with another backup attempt.
+        string stagingPath = destinationPath + "." + Guid.NewGuid().ToString("N") + ".partial";
 
         try
         {
             // SQL Server or an antivirus/indexing process can briefly hold the completed .bak.
             // Retry sharing/lock violations rather than failing the entire backup immediately.
             await using (var input = await OpenReadWithRetryAsync(serverFilePath, token))
-            await using (var output = new FileStream(stagingPath, FileMode.Create, FileAccess.Write, FileShare.None, 1024 * 1024, true))
+            await using (var output = new FileStream(stagingPath, FileMode.CreateNew, FileAccess.Write, FileShare.None, 1024 * 1024, true))
             {
                 await input.CopyToAsync(output, 1024 * 1024, token);
                 await output.FlushAsync(token);
+                output.Flush(flushToDisk: true);
             }
 
             await using var sourceHashStream = await OpenReadWithRetryAsync(serverFilePath, token);
@@ -155,18 +158,46 @@ public static class SqlBackupService
             if (!System.Security.Cryptography.CryptographicOperations.FixedTimeEquals(sourceHash, destinationHash))
                 throw new IOException("The SQL .bak file failed the integrity check after copying.");
 
-            File.Move(stagingPath, destinationPath, overwrite: false);
+            // Antivirus/indexing software may briefly open the completed .partial file.
+            // Retry the final same-directory rename; never remove an existing good destination.
+            await MoveWithRetryAsync(stagingPath, destinationPath, token);
             try { File.Delete(serverFilePath); } catch { /* Keep the verified local copy; server-side cleanup can be done later. */ }
         }
         catch
         {
+            // Cleanup is best-effort. In particular, do not delete destinationPath:
+            // it may contain the previous known-good backup if promotion did not succeed.
             try { if (File.Exists(stagingPath)) File.Delete(stagingPath); } catch { }
-            try { if (File.Exists(destinationPath)) File.Delete(destinationPath); } catch { }
             throw;
         }
         // Keep the SQL Server .bak when copying or verification fails. It is the
         // evidence needed to diagnose a sharing violation and may be the only valid copy.
         // Delete it only after the verified copy has been promoted successfully.
+    }
+
+    private static async Task MoveWithRetryAsync(string sourcePath, string destinationPath, CancellationToken token)
+    {
+        const int maxAttempts = 30;
+
+        for (int attempt = 1; ; attempt++)
+        {
+            token.ThrowIfCancellationRequested();
+            try
+            {
+                File.Move(sourcePath, destinationPath, overwrite: false);
+                return;
+            }
+            catch (IOException ex) when (IsSharingViolation(ex) && attempt < maxAttempts)
+            {
+                await Task.Delay(TimeSpan.FromSeconds(1), token);
+            }
+            catch (IOException ex) when (IsSharingViolation(ex))
+            {
+                throw new IOException(
+                    $"The verified SQL backup is still locked during final file promotion after {maxAttempts} attempts (about {maxAttempts} seconds): {sourcePath}. Close programs using files in the backup staging folder and check antivirus/backup scanners.",
+                    ex);
+            }
+        }
     }
 
     private static async Task<FileStream> OpenReadWithRetryAsync(string path, CancellationToken token)
