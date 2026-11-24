@@ -20,9 +20,9 @@
             <Setter Property="FontWeight" Value="SemiBold"/>
         </Style>
         <Style TargetType="TextBox">
-            <Setter Property="Background" Value="#101F33"/>
-            <Setter Property="Foreground" Value="#EDF7FF"/>
-            <Setter Property="BorderBrush" Value="#31506F"/>
+            <Setter Property="Background" Value="#F7FBFF"/>
+            <Setter Property="Foreground" Value="#075A9C"/>
+            <Setter Property="BorderBrush" Value="#FFFFFF"/>
             <Setter Property="Padding" Value="9,7"/>
             <Setter Property="CaretBrush" Value="#55E5FF"/>
         </Style>
@@ -40,9 +40,9 @@
             </Setter>
         </Style>
         <Style TargetType="ComboBox">
-            <Setter Property="Foreground" Value="#EDF7FF"/>
-            <Setter Property="Background" Value="#102B49"/>
-            <Setter Property="BorderBrush" Value="#2876A8"/>
+            <Setter Property="Foreground" Value="#075A9C"/>
+            <Setter Property="Background" Value="#F7FBFF"/>
+            <Setter Property="BorderBrush" Value="#FFFFFF"/>
             <Setter Property="Padding" Value="8,6"/>
             <Setter Property="SnapsToDevicePixels" Value="True"/>
             <Setter Property="Template">
@@ -54,7 +54,7 @@
                                 <Border Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}"
                                         BorderThickness="1" CornerRadius="5" Padding="{TemplateBinding Padding}">
                                     <DockPanel LastChildFill="True">
-                                        <Path DockPanel.Dock="Right" Data="M 0 0 L 4 4 L 8 0 Z" Fill="#8CA7C5"
+                                        <Path DockPanel.Dock="Right" Data="M 0 0 L 4 4 L 8 0 Z" Fill="#075A9C"
                                               Width="8" Height="4" Stretch="Fill" VerticalAlignment="Center" Margin="8,0,2,0"/>
                                         <ContentPresenter Content="{TemplateBinding SelectionBoxItem}"
                                                           ContentTemplate="{TemplateBinding SelectionBoxItemTemplate}"
@@ -65,7 +65,7 @@
                             </ToggleButton>
                             <Popup x:Name="DropDownPopup" Placement="Bottom" AllowsTransparency="True" Focusable="False"
                                    IsOpen="{TemplateBinding IsDropDownOpen}" PopupAnimation="Fade">
-                                <Border Background="#102B49" BorderBrush="#2876A8" BorderThickness="1"
+                                <Border Background="#FFFFFF" BorderBrush="#FFFFFF" BorderThickness="1"
                                         CornerRadius="5" MinWidth="{Binding ActualWidth, RelativeSource={RelativeSource TemplatedParent}}">
                                     <ScrollViewer MaxHeight="260" SnapsToDevicePixels="True">
                                         <ItemsPresenter KeyboardNavigation.DirectionalNavigation="Contained"/>
@@ -86,8 +86,8 @@
             </Setter>
         </Style>
         <Style TargetType="ComboBoxItem">
-            <Setter Property="Foreground" Value="#EDF7FF"/>
-            <Setter Property="Background" Value="#102B49"/>
+            <Setter Property="Foreground" Value="#075A9C"/>
+            <Setter Property="Background" Value="#FFFFFF"/>
             <Setter Property="Padding" Value="9,7"/>
             <Setter Property="Template">
                 <Setter.Value>
@@ -97,10 +97,10 @@
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsHighlighted" Value="True">
-                                <Setter TargetName="ItemSurface" Property="Background" Value="#17659A"/>
+                                <Setter TargetName="ItemSurface" Property="Background" Value="#D8EEFF"/>
                             </Trigger>
                             <Trigger Property="IsSelected" Value="True">
-                                <Setter TargetName="ItemSurface" Property="Background" Value="#145487"/>
+                                <Setter TargetName="ItemSurface" Property="Background" Value="#B9DFFF"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -108,9 +108,9 @@
             </Setter>
         </Style>
         <Style TargetType="PasswordBox">
-            <Setter Property="Background" Value="#101F33"/>
-            <Setter Property="Foreground" Value="#EDF7FF"/>
-            <Setter Property="BorderBrush" Value="#31506F"/>
+            <Setter Property="Background" Value="#F7FBFF"/>
+            <Setter Property="Foreground" Value="#075A9C"/>
+            <Setter Property="BorderBrush" Value="#FFFFFF"/>
             <Setter Property="CaretBrush" Value="#55E5FF"/>
         </Style>
         <Style TargetType="ListBoxItem">
@@ -185,7 +185,7 @@
                 <TextBlock Text="Username" Foreground="#8CA7C5" FontSize="11" Margin="0,0,0,5"/>
                 <TextBox x:Name="UsernameBox" IsEnabled="False" Margin="0,0,0,12"/>
                 <TextBlock Text="Password" Foreground="#8CA7C5" FontSize="11" Margin="0,0,0,5"/>
-                <PasswordBox x:Name="PasswordBox" IsEnabled="False" Background="#101F33" Foreground="#EDF7FF" BorderBrush="#31506F" Padding="9,7" Margin="0,0,0,14"/>
+                <PasswordBox x:Name="PasswordBox" IsEnabled="False" Background="#F7FBFF" Foreground="#075A9C" BorderBrush="#FFFFFF" Padding="9,7" Margin="0,0,0,14"/>
                 <WrapPanel>
                     <Button Content="Test &amp; load databases" Style="{StaticResource PrimaryButton}" Click="TestConnection_Click"/>
                     <Button Content="Save connection" Click="SaveConnection_Click" Margin="0"/>
