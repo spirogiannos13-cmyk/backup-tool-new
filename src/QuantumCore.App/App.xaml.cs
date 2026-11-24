@@ -14,6 +14,7 @@ public partial class App : Application
             try
             {
                 RestoreService.RunElevatedRestore(args[restoreIndex + 1]);
+                MessageBox.Show("Full system recovery completed successfully. The SQL database file was copied to C:\\sunsoftsetups and was not restored into SQL Server.", "Quantum Core recovery complete", MessageBoxButton.OK, MessageBoxImage.Information);
                 Shutdown(0);
             }
             catch (Exception ex)
