@@ -56,8 +56,6 @@ public static class RestoreService
             Directory.CreateDirectory(safety);
             BackupExistingFile(TaxProviderConfig, Path.Combine(safety, "appsettings.production.json"));
             BackupExistingFile(WebServiceConfig, Path.Combine(safety, "web.config"));
-            if (Directory.Exists(FormPath))
-                Directory.Move(FormPath, Path.Combine(safety, "form_path"));
             ExportRegistryBeforeRestore(@"HKEY_LOCAL_MACHINE\SOFTWARE\WOW6432Node\Sunsoft\System\Printers",
                 Path.Combine(safety, "printers.reg"));
             try
@@ -77,8 +75,6 @@ public static class RestoreService
             Directory.CreateDirectory(Path.GetDirectoryName(WebServiceConfig)!);
             File.Copy(Path.Combine(extracted, "appsettings.production.json"), TaxProviderConfig, overwrite: true);
             File.Copy(Path.Combine(extracted, "web.config"), WebServiceConfig, overwrite: true);
-            Directory.Move(formExtract, FormPath);
-
             RunProcess("reg.exe", ["import", Path.Combine(extracted, "printers.reg")]);
             RunProcess("reg.exe", ["import", Path.Combine(extracted, "vb.reg")]);
 
@@ -96,6 +92,11 @@ public static class RestoreService
             string sqlSafety = Path.Combine(safety, databaseFileName);
             BackupExistingFile(sqlTarget, sqlSafety);
             File.Copy(Path.Combine(extracted, "database.bak"), sqlTarget, overwrite: true);
+
+            // Swap form_path last, after the other restore components have passed.
+            if (Directory.Exists(FormPath))
+                Directory.Move(FormPath, Path.Combine(safety, "form_path"));
+            Directory.Move(formExtract, FormPath);
 
             File.WriteAllText(Path.Combine(safety, "RESTORE-INFO.txt"),
                 $"Restore completed: {DateTime.Now:O}{Environment.NewLine}Database file copied to: {sqlTarget}{Environment.NewLine}The SQL database was NOT restored or attached.");
