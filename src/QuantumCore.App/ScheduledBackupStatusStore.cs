@@ -65,9 +65,16 @@ public static class ScheduledBackupStatusStore
                 RetryAttempt = retryAttempt,
                 LastUploadProgressAt = lastUploadProgressAt
             };
-            string temp = FilePath + ".tmp";
+            // Use a unique temporary file so concurrent writers cannot collide.
+            string temp = FilePath + "." + Guid.NewGuid().ToString("N") + ".tmp";
             File.WriteAllText(temp, JsonSerializer.Serialize(status));
-            File.Move(temp, FilePath, overwrite: true);
+
+            // Replace the published snapshot atomically. Readers should see either the
+            // previous complete status or the new complete status, never a missing file.
+            if (File.Exists(FilePath))
+                File.Replace(temp, FilePath, destinationBackupFileName: null);
+            else
+                File.Move(temp, FilePath);
         }
         catch { /* Dashboard telemetry must never interrupt a backup. */ }
     }
