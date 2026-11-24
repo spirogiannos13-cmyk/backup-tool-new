@@ -88,6 +88,19 @@ public static class BusinessBackupService
         created.Add(sqlTarget);
         bytes += new FileInfo(sqlTarget).Length;
 
+        var manifest = new QuantumCoreBackupManifest
+        {
+            DatabaseName = databaseName,
+            CreatedAt = DateTimeOffset.Now,
+            FormatVersion = 1
+        };
+        string manifestPath = Path.Combine(stagingDirectory, QuantumCoreBackupManifest.FileName);
+        await File.WriteAllTextAsync(manifestPath,
+            System.Text.Json.JsonSerializer.Serialize(manifest, new System.Text.Json.JsonSerializerOptions { WriteIndented = true }),
+            token);
+        created.Add(manifestPath);
+        bytes += new FileInfo(manifestPath).Length;
+
         Report(7, "Business backup components prepared");
         return new BusinessBackupResult(bytes, created);
     }
