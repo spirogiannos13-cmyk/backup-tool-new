@@ -60,6 +60,16 @@ public static class RestoreService
                 Directory.Move(FormPath, Path.Combine(safety, "form_path"));
             ExportRegistryBeforeRestore(@"HKEY_LOCAL_MACHINE\SOFTWARE\WOW6432Node\Sunsoft\System\Printers",
                 Path.Combine(safety, "printers.reg"));
+            try
+            {
+                string windowsForPrint = Environment.GetFolderPath(Environment.SpecialFolder.Windows);
+                string printBrmForBackup = Path.Combine(windowsForPrint, "System32", "spool", "tools", "PrintBrm.exe");
+                if (!File.Exists(printBrmForBackup) && Environment.Is64BitOperatingSystem && !Environment.Is64BitProcess)
+                    printBrmForBackup = Path.Combine(windowsForPrint, "Sysnative", "spool", "tools", "PrintBrm.exe");
+                if (File.Exists(printBrmForBackup))
+                    RunProcess(printBrmForBackup, ["-b", "-f", Path.Combine(safety, "printers-before-restore.printerExport")]);
+            }
+            catch { /* Keep recovery moving if the old printer configuration cannot be exported. */ }
             ExportRegistryBeforeRestore(@"HKEY_CURRENT_USER\Software\VB and VBA Program Settings\spim_POSSystem",
                 Path.Combine(safety, "vb.reg"));
 
