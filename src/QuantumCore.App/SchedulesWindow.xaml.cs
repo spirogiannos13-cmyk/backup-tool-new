@@ -8,6 +8,8 @@ public partial class SchedulesWindow : Window
 {
     private List<BackupSchedule> _schedules = [];
     private List<SavedSqlConnection> _connections = [];
+    private readonly HashSet<string> _orphanTaskIds = new(StringComparer.OrdinalIgnoreCase);
+    private string? _editingScheduleId;
 
     public SchedulesWindow()
     {
@@ -18,6 +20,7 @@ public partial class SchedulesWindow : Window
         _schedules = ScheduleStore.Load();
         RefreshSchedules();
         RefreshHistory();
+        Loaded += async (_, _) => await RefreshSchedulesFromTaskSchedulerAsync();
     }
 
     private void SqlConnectionCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -91,11 +94,13 @@ public partial class SchedulesWindow : Window
             return;
         }
 
-        var existing = _schedules.FirstOrDefault(s =>
-            s.BackupProfile.Equals("Business", StringComparison.OrdinalIgnoreCase) &&
-            s.SqlConnectionId == connection.Id &&
-            s.DatabaseName.Equals(databaseName, StringComparison.OrdinalIgnoreCase) &&
-            s.DestinationType.Equals("MEGA", StringComparison.OrdinalIgnoreCase));
+        var existing = _editingScheduleId is not null
+            ? _schedules.FirstOrDefault(s => s.Id == _editingScheduleId)
+            : _schedules.FirstOrDefault(s =>
+                s.BackupProfile.Equals("Business", StringComparison.OrdinalIgnoreCase) &&
+                s.SqlConnectionId == connection.Id &&
+                s.DatabaseName.Equals(databaseName, StringComparison.OrdinalIgnoreCase) &&
+                s.DestinationType.Equals("MEGA", StringComparison.OrdinalIgnoreCase));
         var schedule = existing ?? new BackupSchedule();
         string oldName = schedule.Name;
         string oldTime = schedule.Time;
@@ -114,7 +119,9 @@ public partial class SchedulesWindow : Window
             if (existing is null) _schedules.Add(schedule);
             ScheduleStore.Save(_schedules);
             await WindowsTaskScheduler.RegisterAsync(schedule);
-            RefreshSchedules();
+            _editingScheduleId = null;
+            SaveScheduleButton.Content = "＋  SAVE DAILY SCHEDULE";
+            await RefreshSchedulesFromTaskSchedulerAsync();
             StatusText.Text = $"Daily Business Backup scheduled for {schedule.Time} · MEGA Cloud.";
             MessageBox.Show(this,
                 $"Full Business Backup is scheduled every day at {schedule.Time}.\n\nDatabase: {databaseName}\nSQL connection: {connection}\nDestination: MEGA Cloud\nRemote file: QuantumCore_Backup.zip (overwrite)",
@@ -130,7 +137,9 @@ public partial class SchedulesWindow : Window
                 schedule.Frequency = oldFrequency;
             }
             ScheduleStore.Save(_schedules);
-            MessageBox.Show(this, ex.Message, "Could not create schedule", MessageBoxButton.OK, MessageBoxImage.Error);
+            _editingScheduleId = null;
+            SaveScheduleButton.Content = "＋  SAVE DAILY SCHEDULE";
+            MessageBox.Show(this, ex.Message, "Could not save schedule", MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
 
@@ -145,10 +154,12 @@ public partial class SchedulesWindow : Window
         try
         {
             await WindowsTaskScheduler.DeleteAsync(schedule.Id);
-            _schedules.RemoveAt(index);
+            _schedules.RemoveAll(s => s.Id == schedule.Id);
+            _orphanTaskIds.Remove(schedule.Id);
             ScheduleStore.Save(_schedules);
-            RefreshSchedules();
-            StatusText.Text = "Scheduled task removed.";
+            if (_editingScheduleId == schedule.Id) CancelEdit();
+            await RefreshSchedulesFromTaskSchedulerAsync();
+            StatusText.Text = "Scheduled task removed from Windows Task Scheduler.";
         }
         catch (Exception ex)
         {
@@ -156,11 +167,80 @@ public partial class SchedulesWindow : Window
         }
     }
 
-    private void Refresh_Click(object sender, RoutedEventArgs e)
+    private async void Refresh_Click(object sender, RoutedEventArgs e)
     {
         _schedules = ScheduleStore.Load();
-        RefreshSchedules();
+        await RefreshSchedulesFromTaskSchedulerAsync();
         RefreshHistory();
+    }
+
+    private void ModifySchedule_Click(object sender, RoutedEventArgs e)
+    {
+        int index = SchedulesList.SelectedIndex;
+        if (index < 0 || index >= _schedules.Count) return;
+        var schedule = _schedules[index];
+        if (_orphanTaskIds.Contains(schedule.Id))
+        {
+            MessageBox.Show(this, "This Windows task no longer has its saved Quantum Core settings. You can remove it, but it cannot be edited. Create a new schedule after choosing its SQL connection and database.", "Settings unavailable", MessageBoxButton.OK, MessageBoxImage.Information);
+            return;
+        }
+
+        var connection = _connections.FirstOrDefault(x => x.Id == schedule.SqlConnectionId);
+        if (connection is null)
+        {
+            MessageBox.Show(this, "The saved SQL connection for this task was not found. Re-save the SQL connection before editing this schedule.", "SQL connection unavailable", MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
+        }
+
+        SqlConnectionCombo.SelectedItem = connection;
+        DatabaseCombo.ItemsSource = new[] { schedule.DatabaseName };
+        DatabaseCombo.SelectedIndex = 0;
+        TimeBox.Text = schedule.Time;
+        _editingScheduleId = schedule.Id;
+        SaveScheduleButton.Content = "✓  UPDATE SELECTED SCHEDULE";
+        StatusText.Text = $"Editing: {schedule.Name}. Change the time or database, then update.";
+    }
+
+    private void CancelEdit()
+    {
+        _editingScheduleId = null;
+        SaveScheduleButton.Content = "＋  SAVE DAILY SCHEDULE";
+        StatusText.Text = "Edit cancelled.";
+    }
+
+    private async Task RefreshSchedulesFromTaskSchedulerAsync()
+    {
+        try
+        {
+            var taskIds = await WindowsTaskScheduler.ListScheduleIdsAsync();
+            _orphanTaskIds.Clear();
+            foreach (var id in taskIds)
+            {
+                if (_schedules.Any(s => s.Id.Equals(id, StringComparison.OrdinalIgnoreCase)))
+                    continue;
+                _orphanTaskIds.Add(id);
+                _schedules.Add(new BackupSchedule
+                {
+                    Id = id,
+                    Name = "Quantum Core task — saved settings not found",
+                    Frequency = "Windows Task Scheduler",
+                    Time = "—",
+                    DatabaseName = "Configuration unavailable",
+                    DestinationType = "Unknown"
+                });
+            }
+
+            var actualIds = taskIds.ToHashSet(StringComparer.OrdinalIgnoreCase);
+            _schedules.RemoveAll(s => !_orphanTaskIds.Contains(s.Id) &&
+                !actualIds.Contains(s.Id) &&
+                !ScheduleStore.Load().Any(saved => saved.Id == s.Id));
+            RefreshSchedules();
+        }
+        catch (Exception ex)
+        {
+            StatusText.Text = "Could not read Windows Task Scheduler: " + ex.Message;
+            RefreshSchedules();
+        }
     }
 
     private void RefreshSchedules()
@@ -168,7 +248,9 @@ public partial class SchedulesWindow : Window
         SchedulesList.Items.Clear();
         foreach (var schedule in _schedules)
         {
-            string detail = schedule.BackupProfile.Equals("Business", StringComparison.OrdinalIgnoreCase)
+            string detail = _orphanTaskIds.Contains(schedule.Id)
+                ? "Windows task exists, but its saved Quantum Core settings are missing"
+                : schedule.BackupProfile.Equals("Business", StringComparison.OrdinalIgnoreCase)
                 ? $"Full Business Backup · {schedule.DatabaseName} · {schedule.DestinationType}"
                 : $"{schedule.DestinationType} · legacy file/folder schedule";
             SchedulesList.Items.Add($"{schedule.Name}\n{schedule.Frequency} · {schedule.Time}\n{detail}");
