@@ -82,6 +82,41 @@ public static class WindowsTaskScheduler
         await RunSchtasksAsync(["/Delete", "/TN", Prefix + id, "/F"], cancellationToken, allowMissing: true);
     }
 
+    public static async Task<List<string>> ListScheduleIdsAsync(CancellationToken cancellationToken = default)
+    {
+        var start = new ProcessStartInfo("schtasks.exe")
+        {
+            UseShellExecute = false,
+            CreateNoWindow = true,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true
+        };
+        start.ArgumentList.Add("/Query");
+        start.ArgumentList.Add("/FO");
+        start.ArgumentList.Add("CSV");
+        start.ArgumentList.Add("/NH");
+
+        using var process = Process.Start(start)
+            ?? throw new InvalidOperationException("Could not read Windows Task Scheduler.");
+        var outputTask = process.StandardOutput.ReadToEndAsync(cancellationToken);
+        var errorTask = process.StandardError.ReadToEndAsync(cancellationToken);
+        await process.WaitForExitAsync(cancellationToken);
+        var output = await outputTask;
+        var error = await errorTask;
+        if (process.ExitCode != 0)
+            throw new InvalidOperationException("Windows Task Scheduler query failed. " + error.Trim());
+
+        var ids = new List<string>();
+        foreach (var line in output.Split(new[] { '\\r', '\\n' }, StringSplitOptions.RemoveEmptyEntries))
+        {
+            var firstColumn = line.Split(',')[0].Trim().Trim('"');
+            var taskName = firstColumn[(firstColumn.LastIndexOf('\\\\') + 1)..];
+            if (taskName.StartsWith(Prefix, StringComparison.OrdinalIgnoreCase))
+                ids.Add(taskName[Prefix.Length..]);
+        }
+        return ids.Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+    }
+
     private static async Task RunSchtasksAsync(IEnumerable<string> arguments, CancellationToken token, bool allowMissing = false)
     {
         var start = new ProcessStartInfo("schtasks.exe") { UseShellExecute = false, CreateNoWindow = true, RedirectStandardOutput = true, RedirectStandardError = true };
