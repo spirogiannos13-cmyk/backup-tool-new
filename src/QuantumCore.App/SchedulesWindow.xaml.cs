@@ -136,7 +136,7 @@ public partial class SchedulesWindow : Window
                 schedule.Time = oldTime;
                 schedule.Frequency = oldFrequency;
             }
-            ScheduleStore.Save(_schedules);
+            SaveStoredSchedules();
             _editingScheduleId = null;
             SaveScheduleButton.Content = "＋  SAVE DAILY SCHEDULE";
             MessageBox.Show(this, ex.Message, "Could not save schedule", MessageBoxButton.OK, MessageBoxImage.Error);
@@ -156,7 +156,7 @@ public partial class SchedulesWindow : Window
             await WindowsTaskScheduler.DeleteAsync(schedule.Id);
             _schedules.RemoveAll(s => s.Id == schedule.Id);
             _orphanTaskIds.Remove(schedule.Id);
-            ScheduleStore.Save(_schedules);
+            SaveStoredSchedules();
             if (_editingScheduleId == schedule.Id) CancelEdit();
             await RefreshSchedulesFromTaskSchedulerAsync();
             StatusText.Text = "Scheduled task removed from Windows Task Scheduler.";
