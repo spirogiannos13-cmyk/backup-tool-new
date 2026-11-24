@@ -10,6 +10,7 @@ public partial class RestoreWindow : Window
     private MegaApiClient? _client;
     private string? _downloadedArchive;
     private QuantumCoreBackupManifest? _manifest;
+    private bool _restoreLaunched;
 
     public RestoreWindow()
     {
@@ -18,7 +19,10 @@ public partial class RestoreWindow : Window
         Closed += async (_, _) =>
         {
             if (_client is not null) { try { await _client.LogoutAsync(); } catch { } }
-            try { if (_downloadedArchive is not null && File.Exists(_downloadedArchive)) File.Delete(_downloadedArchive); } catch { }
+            if (!_restoreLaunched)
+            {
+                try { if (_downloadedArchive is not null && File.Exists(_downloadedArchive)) File.Delete(_downloadedArchive); } catch { }
+            }
         };
     }
 
@@ -87,16 +91,14 @@ public partial class RestoreWindow : Window
                 Verb = "runas"
             };
             string processPath = Environment.ProcessPath ?? throw new InvalidOperationException("Could not locate the Quantum Core executable.");
-            if (Path.GetFileNameWithoutExtension(processPath).Equals("dotnet", StringComparison.OrdinalIgnoreCase))
-                start.FileName = processPath;
-            else
-                start.FileName = processPath;
+            start.FileName = processPath;
 
             if (Path.GetFileNameWithoutExtension(processPath).Equals("dotnet", StringComparison.OrdinalIgnoreCase))
                 start.ArgumentList.Add(Assembly.GetEntryAssembly()?.Location ?? throw new InvalidOperationException("Could not locate Quantum Core assembly."));
             start.ArgumentList.Add("--restore-helper");
             start.ArgumentList.Add(_downloadedArchive);
             Process.Start(start);
+            _restoreLaunched = true;
             StatusText.Text = "Restore helper launched. Complete the Windows Administrator prompt to continue.";
             RestoreButton.IsEnabled = false;
         }
