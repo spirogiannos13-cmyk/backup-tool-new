@@ -17,19 +17,27 @@ public static class SqlBackupService
 
         if (IsLocalServer(connection.Server))
         {
-            if (string.IsNullOrWhiteSpace(defaultDirectory) || !Directory.Exists(defaultDirectory))
+            if (string.IsNullOrWhiteSpace(defaultDirectory))
                 throw new DirectoryNotFoundException(
-                    $"SQL Server's configured backup directory is unavailable: {defaultDirectory ?? "(not configured)"}");
-            return defaultDirectory;
+                    "SQL Server does not report a configured default backup directory.");
+        }
+        else
+        {
+            string remoteDirectory = connection.BackupDirectory.Trim();
+            if (string.IsNullOrWhiteSpace(remoteDirectory) || !remoteDirectory.StartsWith(@"\\", StringComparison.Ordinal))
+                throw new InvalidOperationException(
+                    "For a remote SQL Server, configure a UNC backup share accessible to both SQL Server and this PC.");
+            if (!Directory.Exists(remoteDirectory))
+                throw new DirectoryNotFoundException($"The configured SQL backup share is not accessible: {remoteDirectory}");
         }
 
-        string remoteDirectory = connection.BackupDirectory.Trim();
-        if (string.IsNullOrWhiteSpace(remoteDirectory) || !remoteDirectory.StartsWith(@"\\", StringComparison.Ordinal))
-            throw new InvalidOperationException(
-                "For MEGA backups from a remote SQL Server, configure a UNC backup share accessible to both SQL Server and this PC.");
-        if (!Directory.Exists(remoteDirectory))
-            throw new DirectoryNotFoundException($"The configured SQL backup share is not accessible: {remoteDirectory}");
-        return remoteDirectory;
+        // Keep application staging in the signed-in user's writable profile.
+        // SQL Server itself writes database.bak to its configured server-side path.
+        string stagingRoot = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+            "QuantumCore", "Staging");
+        Directory.CreateDirectory(stagingRoot);
+        return stagingRoot;
     }
 
     public static async Task<string> CreateBackupAsync(
@@ -55,13 +63,14 @@ public static class SqlBackupService
 
         if (localServer)
         {
-            // For a local SQL Server, write the .bak directly into this backup run's
-            // staging directory. This is the folder selected by the user (or its
-            // temporary staging child), so there is no second copy from SQL's default
-            // Program Files\...\Backup directory.
-            backupDirectory = localDestinationDirectory;
-            Directory.CreateDirectory(backupDirectory);
-            fileName = "database.bak";
+            // SQL Server's service account writes the .bak. Keep it in the
+            // configured SQL backup directory, then copy and verify it into the
+            // user's writable Quantum Core staging folder.
+            if (string.IsNullOrWhiteSpace(serverDefaultDirectory))
+                throw new DirectoryNotFoundException(
+                    "SQL Server does not report a configured default backup directory.");
+            backupDirectory = serverDefaultDirectory;
+            fileName = $"QuantumCore_{MakeSafeFileName(databaseName)}_{DateTime.Now:yyyyMMdd_HHmmss}_{Guid.NewGuid():N}.bak";
         }
         else
         {
