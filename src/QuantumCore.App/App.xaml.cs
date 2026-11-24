@@ -8,6 +8,22 @@ public partial class App : Application
     {
         base.OnStartup(e);
         var args = e.Args;
+        int restoreIndex = Array.FindIndex(args, a => a.Equals("--restore-helper", StringComparison.OrdinalIgnoreCase));
+        if (restoreIndex >= 0 && restoreIndex + 1 < args.Length)
+        {
+            try
+            {
+                RestoreService.RunElevatedRestore(args[restoreIndex + 1]);
+                Shutdown(0);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.ToString(), "Quantum Core restore failed", MessageBoxButton.OK, MessageBoxImage.Error);
+                Shutdown(1);
+            }
+            return;
+        }
+
         int runIndex = Array.FindIndex(args, a => a.Equals("--run-schedule", StringComparison.OrdinalIgnoreCase));
         if (runIndex >= 0 && runIndex + 1 < args.Length)
         {
