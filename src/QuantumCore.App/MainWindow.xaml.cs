@@ -535,6 +535,13 @@ public partial class MainWindow : Window
     private void Settings_Click(object sender, RoutedEventArgs e) =>
         ShowPage("Settings", "Quantum Core Settings", "Application preferences and system configuration.", SettingsPage, SettingsNav);
 
+    private void DisasterRecovery_Click(object sender, RoutedEventArgs e)
+    {
+        var dialog = new RestoreWindow { Owner = this };
+        dialog.ShowDialog();
+        RefreshBackupDashboard();
+    }
+
     private void NewBackup_Click(object sender, RoutedEventArgs e)
     {
         var dialog = new BackupWindow { Owner = this };
