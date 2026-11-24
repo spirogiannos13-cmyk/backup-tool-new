@@ -60,6 +60,7 @@
             </Border>
         </Grid>
         <Grid Grid.Row="2" Margin="0,18,0,0">
+            <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
             <TextBlock Text="Existing files are copied to a PreRestore safety folder before replacement. Administrator approval is required."
                        Foreground="#7894B2" FontSize="10" VerticalAlignment="Center" TextWrapping="Wrap" Margin="0,0,220,0"/>
             <Button x:Name="RestoreButton" Grid.Column="1" Content="RESTORE FULL SYSTEM  →"
