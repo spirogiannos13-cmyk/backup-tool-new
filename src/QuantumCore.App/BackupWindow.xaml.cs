@@ -200,28 +200,16 @@ public partial class BackupWindow : Window
                         if (remember) MegaAccountStore.Save(email!, session);
                     }
 
-                    var root = client.GetNodes().Single(n => n.Type == NodeType.Root);
-                    const string finalRemoteName = "QuantumCore_Backup.zip";
-                    string uploadTempName = "QuantumCore_Backup.uploading.zip";
-                    var existingTemp = client.GetNodes(root).FirstOrDefault(n => n.Type == NodeType.File && n.Name == uploadTempName);
-                    if (existingTemp is not null) await client.DeleteAsync(existingTemp, moveToTrash: false);
-                    var existingFinal = client.GetNodes(root).FirstOrDefault(n => n.Type == NodeType.File && n.Name == finalRemoteName);
+                    string pcFolderName = MegaCloudService.GetPcFolderName();
                     var progress = new Progress<double>(p =>
                     {
                         BackupProgress.IsIndeterminate = false;
                         BackupProgress.Value = Math.Clamp(p, 0, 100);
                         ProgressLabel.Text = $"{p:0}%";
-                        StatusText.Text = $"Uploading business backup to MEGA… {p:0}%";
+                        StatusText.Text = $"Uploading business backup to MEGA / {pcFolderName}… {p:0}%";
                     });
-                    string uploadPath = Path.Combine(Path.GetDirectoryName(archive)!, uploadTempName);
-                    File.Move(archive, uploadPath, overwrite: true);
-                    archive = uploadPath;
-                    INode uploadedNode = await client.UploadFileAsync(uploadPath, root, progress, _cancellation.Token);
-                    _cancellation.Token.ThrowIfCancellationRequested();
-                    INode promotedNode = await client.RenameAsync(uploadedNode, finalRemoteName);
-                    if (existingFinal is not null)
-                        await client.DeleteAsync(existingFinal, moveToTrash: false);
-                    CreatedBackupPath = "MEGA:/" + promotedNode.Name;
+                    await MegaCloudService.ReplacePcBackupAsync(client, archive, progress, _cancellation.Token);
+                    CreatedBackupPath = $"MEGA:/{pcFolderName}/{MegaCloudService.BackupFileName}";
                 }
                 finally
                 {
