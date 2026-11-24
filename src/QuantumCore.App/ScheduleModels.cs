@@ -107,10 +107,10 @@ public static class WindowsTaskScheduler
             throw new InvalidOperationException("Windows Task Scheduler query failed. " + error.Trim());
 
         var ids = new List<string>();
-        foreach (var line in output.Split(new[] { '\\r', '\\n' }, StringSplitOptions.RemoveEmptyEntries))
+        foreach (var line in output.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries))
         {
             var firstColumn = line.Split(',')[0].Trim().Trim('"');
-            var taskName = firstColumn[(firstColumn.LastIndexOf('\\\\') + 1)..];
+            var taskName = firstColumn[(firstColumn.LastIndexOf('\\') + 1)..];
             if (taskName.StartsWith(Prefix, StringComparison.OrdinalIgnoreCase))
                 ids.Add(taskName[Prefix.Length..]);
         }
