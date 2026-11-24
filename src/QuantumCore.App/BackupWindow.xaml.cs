@@ -208,6 +208,9 @@ public partial class BackupWindow : Window
                         ProgressLabel.Text = $"{p:0}%";
                         StatusText.Text = $"Uploading business backup to MEGA / {pcFolderName}… {p:0}%";
                     });
+                    string uploadPath = Path.Combine(Path.GetDirectoryName(archive)!, MegaCloudService.UploadingFileName);
+                    File.Move(archive, uploadPath, overwrite: true);
+                    archive = uploadPath;
                     await MegaCloudService.ReplacePcBackupAsync(client, archive, progress, _cancellation.Token);
                     CreatedBackupPath = $"MEGA:/{pcFolderName}/{MegaCloudService.BackupFileName}";
                 }
@@ -236,7 +239,7 @@ public partial class BackupWindow : Window
                     FinishedAt = DateTime.Now,
                     Success = true,
                     Status = "SUCCESS",
-                    Destination = CreatedBackupPath ?? (useMega ? "MEGA:/QuantumCore_Backup.zip" : DestinationBox.Text),
+                    Destination = CreatedBackupPath ?? (useMega ? $"MEGA:/{MegaCloudService.GetPcFolderName()}/{MegaCloudService.BackupFileName}" : DestinationBox.Text),
                     BytesWritten = BytesCopied,
                     Message = $"Completed successfully. {FormatBytes(BytesCopied)}."
                 });
