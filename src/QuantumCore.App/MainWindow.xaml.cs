@@ -18,6 +18,7 @@ public partial class MainWindow : Window
     {
         InitializeComponent();
         Loaded += MainWindow_Loaded;
+        CurrentPcFolderText.Text = MegaCloudService.GetPcFolderName();
         Closing += (_, _) => BeginUiShutdown();
         _dashboardTimer.Tick += (_, _) => RefreshBackupDashboard();
         _systemTimer.Tick += async (_, _) => await RefreshSystemMonitorAsync();
@@ -435,7 +436,93 @@ public partial class MainWindow : Window
     {
         ShowPage("Cloud & Storage", "MEGA Account Management", "Connect, change or disconnect your cloud account.", CloudPage, CloudNav);
         RefreshMegaAccountPanel();
+        _ = RefreshMegaCloudAsync();
     }
+    private async Task<MegaApiClient> CreateSavedMegaClientAsync()
+    {
+        if (!MegaAccountStore.TryLoad(out var account) || account is null)
+            throw new InvalidOperationException("Connect to MEGA and enable Remember Account before browsing cloud backups.");
+        var client = new MegaApiClient();
+        await client.LoginAsync(account.ToToken()).WaitAsync(TimeSpan.FromSeconds(45));
+        return client;
+    }
+
+    private async void RefreshMegaCloud_Click(object sender, RoutedEventArgs e) =>
+        await RefreshMegaCloudAsync();
+
+    private async Task RefreshMegaCloudAsync()
+    {
+        try
+        {
+            MegaCloudStatusText.Text = "Connecting to MEGA and loading PC folders…";
+            var client = await CreateSavedMegaClientAsync();
+            var folders = await MegaCloudService.ListRootFoldersAsync(client);
+            MegaPcFoldersList.ItemsSource = folders;
+            MegaPcFilesList.ItemsSource = null;
+            MegaPcFilesInfoText.Text = "Select a computer folder to view its backup.";
+            MegaCloudStatusText.Text = folders.Count == 0
+                ? "No Quantum Core PC folders found yet. The first backup from this PC will create its folder automatically."
+                : $"Found {folders.Count} PC folder(s) in MEGA.";
+            try { await client.LogoutAsync(); } catch { }
+        }
+        catch (Exception ex)
+        {
+            MegaCloudStatusText.Text = "Could not load MEGA folders: " + ex.Message;
+        }
+    }
+
+    private async void MegaPcFolders_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (MegaPcFoldersList?.SelectedItem is not MegaCloudItem selected || !selected.IsFolder) return;
+        try
+        {
+            var client = await CreateSavedMegaClientAsync();
+            var files = await MegaCloudService.ListFolderContentsAsync(client, selected.Node);
+            MegaPcFilesList.ItemsSource = files;
+            MegaPcFilesInfoText.Text = files.Count == 0
+                ? "This PC folder is empty."
+                : $"{files.Count} file(s) · select a backup to delete it.";
+            try { await client.LogoutAsync(); } catch { }
+        }
+        catch (Exception ex)
+        {
+            MegaPcFilesInfoText.Text = "Could not read this folder: " + ex.Message;
+        }
+    }
+
+    private async void DeleteMegaCloudBackup_Click(object sender, RoutedEventArgs e)
+    {
+        if (MegaPcFilesList.SelectedItem is not MegaCloudItem selected || selected.IsFolder) return;
+        var answer = MessageBox.Show(this,
+            $"Move '{selected.DisplayName}' to the MEGA rubbish bin? This cannot be undone from Quantum Core.",
+            "Delete cloud backup", MessageBoxButton.YesNo, MessageBoxImage.Warning);
+        if (answer != MessageBoxResult.Yes) return;
+        try
+        {
+            var client = await CreateSavedMegaClientAsync();
+            await MegaCloudService.DeleteFileAsync(client, selected.Node);
+            MegaCloudStatusText.Text = $"Deleted {selected.DisplayName} from MEGA.";
+            await RefreshSelectedMegaPcFolderAsync();
+            try { await client.LogoutAsync(); } catch { }
+        }
+        catch (Exception ex)
+        {
+            MegaCloudStatusText.Text = "Could not delete the selected backup: " + ex.Message;
+        }
+    }
+
+    private async Task RefreshSelectedMegaPcFolderAsync()
+    {
+        if (MegaPcFoldersList.SelectedItem is not MegaCloudItem folder) return;
+        var client = await CreateSavedMegaClientAsync();
+        var files = await MegaCloudService.ListFolderContentsAsync(client, folder.Node);
+        MegaPcFilesList.ItemsSource = files;
+        MegaPcFilesInfoText.Text = files.Count == 0
+            ? "This PC folder is empty."
+            : $"{files.Count} file(s) · select a backup to delete it.";
+        try { await client.LogoutAsync(); } catch { }
+    }
+
     private void Settings_Click(object sender, RoutedEventArgs e) =>
         ShowPage("Settings", "Quantum Core Settings", "Application preferences and system configuration.", SettingsPage, SettingsNav);
 
