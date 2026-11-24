@@ -1,0 +1,70 @@
+<Window x:Class="QuantumCore.App.RestoreWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Disaster Recovery — Quantum Core" Width="820" Height="650"
+        MinWidth="720" MinHeight="560" WindowStartupLocation="CenterOwner"
+        Background="#0B1627" Foreground="#EDF7FF" FontFamily="Segoe UI">
+    <Window.Resources>
+        <Style TargetType="Button">
+            <Setter Property="Foreground" Value="#EAF8FF"/><Setter Property="Background" Value="#183653"/>
+            <Setter Property="BorderBrush" Value="#315777"/><Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Padding" Value="14,9"/><Setter Property="Margin" Value="0,0,8,0"/>
+            <Setter Property="Cursor" Value="Hand"/>
+        </Style>
+        <Style x:Key="PrimaryButton" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+            <Setter Property="Background" Value="#087FC4"/><Setter Property="BorderBrush" Value="#20C6E8"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+        </Style>
+    </Window.Resources>
+    <Grid Margin="24">
+        <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+        <StackPanel Margin="0,0,0,18">
+            <TextBlock Text="QUANTUM CORE / RECOVERY" Foreground="#55DDF7" FontSize="10" FontWeight="SemiBold"/>
+            <TextBlock Text="Disaster Recovery" FontSize="27" FontWeight="SemiBold" Margin="0,5,0,3"/>
+            <TextBlock Text="Select the computer backup to rebuild this Windows installation." Foreground="#8CA7C5" FontSize="12"/>
+        </StackPanel>
+        <Grid Grid.Row="1">
+            <Grid.ColumnDefinitions><ColumnDefinition Width="0.9*"/><ColumnDefinition Width="1.1*"/></Grid.ColumnDefinitions>
+            <Border Grid.Column="0" Background="#101D31" BorderBrush="#263F5E" BorderThickness="1" CornerRadius="12" Padding="16" Margin="0,0,10,0">
+                <DockPanel>
+                    <StackPanel DockPanel.Dock="Top">
+                        <TextBlock Text="MEGA PC BACKUPS" Foreground="#55DDF7" FontSize="10" FontWeight="SemiBold"/>
+                        <Button Content="↻  REFRESH PC LIST" Click="Refresh_Click" HorizontalAlignment="Left" Margin="0,12,0,12"/>
+                    </StackPanel>
+                    <ListBox x:Name="PcFoldersList" SelectionChanged="PcFolders_SelectionChanged"
+                             Background="#0C192B" Foreground="#EDF7FF" BorderBrush="#31506F"
+                             DisplayMemberPath="DisplayName"/>
+                </DockPanel>
+            </Border>
+            <Border Grid.Column="1" Background="#101D31" BorderBrush="#263F5E" BorderThickness="1" CornerRadius="12" Padding="18" Margin="10,0,0,0">
+                <StackPanel>
+                    <TextBlock Text="RECOVERY PREVIEW" Foreground="#55DDF7" FontSize="10" FontWeight="SemiBold"/>
+                    <TextBlock x:Name="SelectedPcText" Text="Select a PC folder" FontSize="19" FontWeight="SemiBold" Margin="0,8,0,4"/>
+                    <TextBlock x:Name="BackupInfoText" Text="The backup contents will be checked before any changes are made."
+                               Foreground="#A9C0DA" TextWrapping="Wrap" Margin="0,0,0,14"/>
+                    <TextBlock Text="WILL BE RESTORED" Foreground="#55DDF7" FontSize="10" FontWeight="SemiBold"/>
+                    <TextBlock Text="• appsettings.production.json&#10;• web.config&#10;• printers.reg and vb.reg&#10;• Windows printer configuration&#10;• C:\form_path contents"
+                               Foreground="#D6E9FA" TextWrapping="Wrap" Margin="0,8,0,14"/>
+                    <Border Background="#102A3A" BorderBrush="#23617A" BorderThickness="1" CornerRadius="8" Padding="12">
+                        <StackPanel>
+                            <TextBlock Text="SQL DATABASE FILE ONLY" Foreground="#8FEBD0" FontSize="10" FontWeight="SemiBold"/>
+                            <TextBlock x:Name="DatabaseTargetText" Text="C:\sunsoftsetups\[database].bak"
+                                       Foreground="#EDF7FF" FontSize="12" Margin="0,6,0,0" TextWrapping="Wrap"/>
+                            <TextBlock Text="Quantum Core will NOT attach, import or restore the database in SQL Server."
+                                       Foreground="#8FEBD0" FontSize="10" Margin="0,5,0,0" TextWrapping="Wrap"/>
+                        </StackPanel>
+                    </Border>
+                    <TextBlock x:Name="StatusText" Text="Connect to MEGA and choose a PC backup."
+                               Foreground="#8CA7C5" TextWrapping="Wrap" Margin="0,14,0,0"/>
+                </StackPanel>
+            </Border>
+        </Grid>
+        <Grid Grid.Row="2" Margin="0,18,0,0">
+            <TextBlock Text="Existing files are copied to a PreRestore safety folder before replacement. Administrator approval is required."
+                       Foreground="#7894B2" FontSize="10" VerticalAlignment="Center" TextWrapping="Wrap" Margin="0,0,220,0"/>
+            <Button x:Name="RestoreButton" Grid.Column="1" Content="RESTORE FULL SYSTEM  →"
+                    Style="{StaticResource PrimaryButton}" HorizontalAlignment="Right" IsEnabled="False"
+                    Click="Restore_Click" Margin="0"/>
+        </Grid>
+    </Grid>
+</Window>
