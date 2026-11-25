@@ -57,15 +57,28 @@ public static class WindowsTaskScheduler
         await DeleteAsync(schedule.Id, cancellationToken);
 
         var taskName = Prefix + schedule.Id;
-        var appHost = Environment.ProcessPath ?? throw new InvalidOperationException("Cannot determine application executable path.");
-        var assemblyPath = System.Reflection.Assembly.GetEntryAssembly()?.Location
-            ?? throw new InvalidOperationException("Cannot determine application assembly path.");
+        var appHost = Environment.ProcessPath
+            ?? throw new InvalidOperationException("Cannot determine application executable path.");
+        var assemblyPath = System.Reflection.Assembly.GetEntryAssembly()?.Location;
         var appHostName = Path.GetFileNameWithoutExtension(appHost);
+
+        // A published single-file app has no usable Assembly.Location. In that
+        // case the scheduled task must launch the current apphost executable
+        // directly; invoking "dotnet" with an empty DLL path only opens dotnet help.
+        // During development (dotnet run), keep the explicit DLL-based launch.
         string taskCommand;
-        if (appHostName.Equals("QuantumCore", StringComparison.OrdinalIgnoreCase))
+        if (appHostName.Equals("QuantumCore", StringComparison.OrdinalIgnoreCase)
+            || string.IsNullOrWhiteSpace(assemblyPath))
+        {
             taskCommand = $"\"{appHost}\" --run-schedule \"{schedule.Id}\"";
+        }
         else
-            taskCommand = $"\"dotnet\" \"{assemblyPath}\" --run-schedule \"{schedule.Id}\"";
+        {
+            var dotnetHost = appHostName.Equals("dotnet", StringComparison.OrdinalIgnoreCase)
+                ? appHost
+                : "dotnet";
+            taskCommand = $"\"{dotnetHost}\" \"{assemblyPath}\" --run-schedule \"{schedule.Id}\"";
+        }
 
         var args = new List<string> { "/Create", "/SC", schedule.Frequency.Equals("Weekly", StringComparison.OrdinalIgnoreCase) ? "WEEKLY" : "DAILY" };
         if (schedule.Frequency.Equals("Weekly", StringComparison.OrdinalIgnoreCase))
