@@ -57,8 +57,17 @@ public static class WindowsTaskScheduler
         await DeleteAsync(schedule.Id, cancellationToken);
 
         var taskName = Prefix + schedule.Id;
-        var appHost = Environment.ProcessPath
-            ?? throw new InvalidOperationException("Cannot determine application executable path.");
+
+        // Prefer the standard installed location so scheduled tasks always use
+        // the deployed application, even when schedules are configured while
+        // running a copy from another folder (for example, bin\\Release).
+        const string installedAppPath = @"C:\\sunsoftsetups\\QuantumCore.exe";
+        var appHost = File.Exists(installedAppPath)
+            ? installedAppPath
+            : Environment.ProcessPath
+                ?? throw new InvalidOperationException(
+                    $"Quantum Core was not found at '{installedAppPath}' and the current executable path is unavailable.");
+
         var assemblyPath = System.Reflection.Assembly.GetEntryAssembly()?.Location;
         var appHostName = Path.GetFileNameWithoutExtension(appHost);
 
