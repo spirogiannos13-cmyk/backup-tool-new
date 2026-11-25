@@ -28,13 +28,37 @@ public partial class App : Application
         int runIndex = Array.FindIndex(args, a => a.Equals("--run-schedule", StringComparison.OrdinalIgnoreCase));
         if (runIndex >= 0 && runIndex + 1 < args.Length)
         {
+            string scheduleId = args[runIndex + 1];
+            string logPath = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                "QuantumCore", "scheduled-backups.log");
+
+            void LogScheduledStartup(string message)
+            {
+                try
+                {
+                    string? directory = Path.GetDirectoryName(logPath);
+                    if (!string.IsNullOrWhiteSpace(directory))
+                        Directory.CreateDirectory(directory);
+                    File.AppendAllText(logPath,
+                        $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] [APP STARTUP] {message}{Environment.NewLine}");
+                }
+                catch
+                {
+                    // Startup diagnostics must never prevent the scheduled backup from running.
+                }
+            }
+
+            LogScheduledStartup($"Scheduled task process started. ScheduleId={scheduleId}; Executable={Environment.ProcessPath ?? "unknown"}; WorkingDirectory={Environment.CurrentDirectory}");
             try
             {
-                await ScheduledBackupRunner.RunAsync(args[runIndex + 1]);
+                await ScheduledBackupRunner.RunAsync(scheduleId);
+                LogScheduledStartup($"Scheduled task completed successfully. ScheduleId={scheduleId}");
                 Shutdown(0);
             }
-            catch
+            catch (Exception ex)
             {
+                LogScheduledStartup($"Scheduled task failed. ScheduleId={scheduleId}{Environment.NewLine}{ex}");
                 Shutdown(1);
             }
             return;
