@@ -135,9 +135,14 @@ public static class SqlBackupService
     {
         string destinationDirectory = Path.GetDirectoryName(destinationPath)!;
         Directory.CreateDirectory(destinationDirectory);
-        // Use a unique temporary name so stale files or concurrent antivirus scans
-        // cannot collide with another backup attempt.
-        string stagingPath = destinationPath + "." + Guid.NewGuid().ToString("N") + ".partial";
+        // Keep SQL copy staging outside the package directory. If antivirus holds
+        // the temporary file, it must never be swept into the final Business ZIP.
+        string copyStagingDirectory = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+            "QuantumCore", "SqlCopyStaging");
+        Directory.CreateDirectory(copyStagingDirectory);
+        string stagingPath = Path.Combine(copyStagingDirectory,
+            Guid.NewGuid().ToString("N") + ".partial");
 
         try
         {
@@ -158,9 +163,15 @@ public static class SqlBackupService
             if (!System.Security.Cryptography.CryptographicOperations.FixedTimeEquals(sourceHash, destinationHash))
                 throw new IOException("The SQL .bak file failed the integrity check after copying.");
 
-            // Antivirus/indexing software may briefly open the completed .partial file.
-            // Retry the final same-directory rename; never remove an existing good destination.
-            await MoveWithRetryAsync(stagingPath, destinationPath, token);
+            // First try the fast same-volume rename. Some antivirus/indexing products
+            // open completed files without FILE_SHARE_DELETE, which blocks rename even
+            // though the file is readable. In that case, fall back to a verified copy
+            // into the package staging directory. The temp file lives outside the ZIP.
+            bool promoted = await TryMoveWithRetryAsync(stagingPath, destinationPath, token);
+            if (!promoted)
+                await CopyToDestinationWithRetryAsync(stagingPath, destinationPath, sourceHash, token);
+
+            try { File.Delete(stagingPath); } catch { /* Isolated temp cleanup is best-effort. */ }
             try { File.Delete(serverFilePath); } catch { /* Keep the verified local copy; server-side cleanup can be done later. */ }
         }
         catch
@@ -175,7 +186,7 @@ public static class SqlBackupService
         // Delete it only after the verified copy has been promoted successfully.
     }
 
-    private static async Task MoveWithRetryAsync(string sourcePath, string destinationPath, CancellationToken token)
+    private static async Task<bool> TryMoveWithRetryAsync(string sourcePath, string destinationPath, CancellationToken token)
     {
         const int maxAttempts = 30;
 
@@ -185,7 +196,7 @@ public static class SqlBackupService
             try
             {
                 File.Move(sourcePath, destinationPath, overwrite: false);
-                return;
+                return true;
             }
             catch (IOException ex) when (IsSharingViolation(ex) && attempt < maxAttempts)
             {
@@ -193,9 +204,58 @@ public static class SqlBackupService
             }
             catch (IOException ex) when (IsSharingViolation(ex))
             {
-                throw new IOException(
-                    $"The verified SQL backup is still locked during final file promotion after {maxAttempts} attempts (about {maxAttempts} seconds): {sourcePath}. Close programs using files in the backup staging folder and check antivirus/backup scanners.",
-                    ex);
+                // A verified stream copy can succeed when a scanner denies
+                // delete/rename sharing but still permits read sharing.
+                return false;
+            }
+        }
+    }
+
+    private static async Task CopyToDestinationWithRetryAsync(
+        string sourcePath, string destinationPath, byte[] expectedSourceHash, CancellationToken token)
+    {
+        const int maxAttempts = 120;
+
+        for (int attempt = 1; ; attempt++)
+        {
+            token.ThrowIfCancellationRequested();
+            bool destinationCreated = false;
+            try
+            {
+                await using (var input = new FileStream(sourcePath, FileMode.Open, FileAccess.Read,
+                    FileShare.ReadWrite | FileShare.Delete, 1024 * 1024, FileOptions.Asynchronous))
+                await using (var output = new FileStream(destinationPath, FileMode.CreateNew, FileAccess.Write,
+                    FileShare.None, 1024 * 1024, FileOptions.Asynchronous))
+                {
+                    destinationCreated = true;
+                    await input.CopyToAsync(output, 1024 * 1024, token);
+                    await output.FlushAsync(token);
+                    output.Flush(flushToDisk: true);
+                }
+
+                await using var verifyStream = new FileStream(destinationPath, FileMode.Open, FileAccess.Read,
+                    FileShare.Read, 1024 * 1024, FileOptions.Asynchronous);
+                byte[] destinationHash = await System.Security.Cryptography.SHA256.HashDataAsync(verifyStream, token);
+                if (!System.Security.Cryptography.CryptographicOperations.FixedTimeEquals(expectedSourceHash, destinationHash))
+                    throw new IOException("The SQL .bak file failed the integrity check during fallback promotion.");
+
+                return;
+            }
+            catch (IOException ex) when (IsSharingViolation(ex) && attempt < maxAttempts)
+            {
+                if (destinationCreated)
+                {
+                    try { File.Delete(destinationPath); } catch { }
+                }
+                await Task.Delay(TimeSpan.FromSeconds(1), token);
+            }
+            catch
+            {
+                if (destinationCreated)
+                {
+                    try { File.Delete(destinationPath); } catch { }
+                }
+                throw;
             }
         }
     }
