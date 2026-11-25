@@ -61,7 +61,7 @@ public static class WindowsTaskScheduler
         // Prefer the standard installed location so scheduled tasks always use
         // the deployed application, even when schedules are configured while
         // running a copy from another folder (for example, bin\\Release).
-        const string installedAppPath = @"C:\\sunsoftsetups\\QuantumCore.exe";
+        const string installedAppPath = @"C:\sunsoftsetups\QuantumCore.exe";
         var appHost = File.Exists(installedAppPath)
             ? installedAppPath
             : Environment.ProcessPath
